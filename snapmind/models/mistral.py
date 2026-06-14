@@ -12,6 +12,8 @@ from snapmind.models.base import BaseModelABC
 
 
 def create_sliding_window_mask(seq_len: int, device: torch.device, window_size: int) -> torch.Tensor:
+    if window_size <= 0:
+        return torch.triu(torch.full((seq_len, seq_len), float("-inf"), device=device), diagonal=1)
     mask = torch.full((seq_len, seq_len), float("-inf"), device=device)
     for i in range(seq_len):
         start = max(0, i - window_size + 1)
@@ -33,6 +35,7 @@ class MistralTransformerBlock(nn.Module):
             dropout=config.dropout,
             bias=False,
             pe=pe,
+            head_dim=config.head_dim,
         )
         self.input_layernorm = RMSNorm(normalized_shape=config.d_model, eps=config.norm_eps)
         self.post_attention_layernorm = RMSNorm(normalized_shape=config.d_model, eps=config.norm_eps)
@@ -51,7 +54,7 @@ class MistralTransformerBlock(nn.Module):
         else:
             mask = None
         attn_out, _ = self.self_attn(self.input_layernorm(x), kv_cache=kv_cache, mask=mask, position_ids=position_ids)
-        if kv_cache is not None and kv_cache.get("k") is not None:
+        if kv_cache is not None and kv_cache.get("k") is not None and self.window_size > 0:
             kv_cache["k"] = kv_cache["k"][..., -self.window_size :, :]
             kv_cache["v"] = kv_cache["v"][..., -self.window_size :, :]
         x = x + attn_out
@@ -69,9 +72,9 @@ class MistralModel(BaseModelABC):
     def __init__(self, config: ModelConfig):
         super().__init__(config)
         self.config = config
-        self.window_size = getattr(config, "window_size", 4096)
+        self.window_size = getattr(config, "window_size", 0)
         self.embed = nn.Embedding(config.vocab_size, config.d_model)
-        head_dim = config.d_model // config.n_heads
+        head_dim = config.head_dim if config.head_dim is not None else config.d_model // config.n_heads
         self.pe = RotaryPositionalEncoding(
             dim=head_dim,
             max_seq_len=config.max_seq_len,
@@ -82,6 +85,8 @@ class MistralModel(BaseModelABC):
         )
         self.norm = RMSNorm(normalized_shape=config.d_model, eps=config.norm_eps)
         self.lm_head = nn.Linear(config.d_model, config.vocab_size, bias=False)
+        if getattr(config, "tie_word_embeddings", False):
+            self.lm_head.weight = self.embed.weight
 
     def forward(
         self, tokens: torch.Tensor, kv_cache: dict | None = None, position_ids: torch.Tensor | None = None

@@ -19,29 +19,31 @@ class GroupedQueryAttention(AttentionABC):
         dropout: float = 0.0,
         bias: bool = False,
         pe: PositionalEncodingABC | None = None,
+        head_dim: int | None = None,
     ):
         super().__init__()
-        assert d_model % n_heads == 0
+        if head_dim is None:
+            assert d_model % n_heads == 0
         self.d_model = d_model
         self.n_heads = n_heads
         self.n_kv_heads = n_kv_heads if n_kv_heads is not None else n_heads
         self.n_rep = self.n_heads // self.n_kv_heads
-        self.head_dim = d_model // n_heads
+        self.head_dim = head_dim if head_dim is not None else d_model // n_heads
         self.dropout = dropout
         self.pe = pe
 
         self.q_proj = nn.Linear(d_model, n_heads * self.head_dim, bias=bias)
         self.k_proj = nn.Linear(d_model, self.n_kv_heads * self.head_dim, bias=bias)
         self.v_proj = nn.Linear(d_model, self.n_kv_heads * self.head_dim, bias=bias)
-        self.out_proj = nn.Linear(d_model, d_model, bias=bias)
+        self.out_proj = nn.Linear(n_heads * self.head_dim, d_model, bias=bias)
 
     def _split_heads(self, x: torch.Tensor, n_heads: int) -> torch.Tensor:
         batch, seq_len, _ = x.shape
         return x.view(batch, seq_len, n_heads, self.head_dim).transpose(1, 2)
 
     def _merge_heads(self, x: torch.Tensor) -> torch.Tensor:
-        batch, _, seq_len, _ = x.shape
-        return x.transpose(1, 2).reshape(batch, seq_len, self.d_model)
+        batch, n_heads, seq_len, head_dim = x.shape
+        return x.transpose(1, 2).reshape(batch, seq_len, n_heads * head_dim)
 
     def forward(
         self,

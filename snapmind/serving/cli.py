@@ -42,6 +42,20 @@ KNOWN_MODELS: dict[str, dict[str, Any]] = {
         "rope_theta": 10000.0,
         "window_size": 4096,
     },
+    "ministral-3-3b": {
+        "d_model": 3072,
+        "n_heads": 32,
+        "n_kv_heads": 8,
+        "n_layers": 26,
+        "vocab_size": 131072,
+        "max_seq_len": 262144,
+        "d_ff": 9216,
+        "norm_eps": 1e-05,
+        "rope_theta": 1000000.0,
+        "window_size": 0,
+        "head_dim": 128,
+        "tie_word_embeddings": True,
+    },
 }
 
 
@@ -65,12 +79,15 @@ def build_model(model_name: str) -> tuple[nn.Module, ModelConfig]:
         norm_eps=spec.get("norm_eps", 1e-5),
         d_ff=spec.get("d_ff", spec["d_model"] * 4),
         rope_theta=spec.get("rope_theta", 10000.0),
+        window_size=spec.get("window_size", 0),
+        head_dim=spec.get("head_dim", None),
+        tie_word_embeddings=spec.get("tie_word_embeddings", False),
     )
     if model_name == "gpt2":
         from snapmind.models.gpt2 import GPT2Model
 
         model: nn.Module = GPT2Model(cfg)
-    elif model_name == "mistral":
+    elif model_name == "mistral" or model_name == "ministral-3-3b":
         from snapmind.models.mistral import MistralModel
 
         model = MistralModel(cfg)

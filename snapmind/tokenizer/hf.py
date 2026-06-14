@@ -5,6 +5,8 @@ from snapmind.tokenizer.base import TokenizerABC
 _HF_TOKENIZER_ID = {
     "gpt2": "openai-community/gpt2",
     "tinyllama": "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
+    "mistral": "mistralai/Mistral-7B-v0.1",
+    "ministral-3-3b": "mistralai/Ministral-3-3B-Base-2512",
 }
 
 

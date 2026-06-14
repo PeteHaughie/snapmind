@@ -1,13 +1,37 @@
 # ─── SECTION: Safetensors Loader ────────────────────────
+import json
 from collections.abc import Callable
 
 import torch.nn as nn
 from huggingface_hub import hf_hub_download
+from huggingface_hub.utils import EntryNotFoundError
 from safetensors.torch import load_file
 
 from snapmind.core.config import ModelConfig
 from snapmind.core.registry import LOADER
 from snapmind.loaders.base import WeightLoaderABC
+
+
+def _load_safetensors_state_dict(repo_id: str, filename: str) -> dict:
+    try:
+        path = hf_hub_download(repo_id=repo_id, filename=filename)
+        return load_file(path, device="cpu")
+    except EntryNotFoundError:
+        pass
+    index_filename = filename.replace(".safetensors", ".safetensors.index.json")
+    index_path = hf_hub_download(repo_id=repo_id, filename=index_filename)
+    with open(index_path) as f:
+        index = json.load(f)
+    weight_map = index.get("weight_map", {})
+    shard_paths: dict[str, str] = {}
+    for shard in set(weight_map.values()):
+        shard_paths[shard] = hf_hub_download(repo_id=repo_id, filename=shard)
+    state_dict = {}
+    for shard, local_path in shard_paths.items():
+        shard_dict = load_file(local_path, device="cpu")
+        state_dict.update(shard_dict)
+    return state_dict
+
 
 _HF_MODEL_MAP: dict[str, tuple[str, str, Callable]] = {}
 
@@ -110,6 +134,31 @@ def _remap_mistral(state_dict: dict, model: nn.Module, config: ModelConfig) -> d
     return _remap_llama(state_dict, model, config)
 
 
+@register_hf_model("ministral-3-3b", "mistralai/Ministral-3-3B-Base-2512", filename="consolidated.safetensors")
+def _remap_ministral3(state_dict: dict, model: nn.Module, config: ModelConfig) -> dict:
+    new_state: dict = {
+        "embed.weight": state_dict["tok_embeddings.weight"],
+        "norm.weight": state_dict["norm.weight"],
+    }
+    hf_to_local = {
+        "attention.wq": "self_attn.q_proj",
+        "attention.wk": "self_attn.k_proj",
+        "attention.wv": "self_attn.v_proj",
+        "attention.wo": "self_attn.out_proj",
+        "attention_norm": "input_layernorm",
+        "ffn_norm": "post_attention_layernorm",
+        "feed_forward.w1": "mlp.gate_proj",
+        "feed_forward.w2": "mlp.down_proj",
+        "feed_forward.w3": "mlp.up_proj",
+    }
+    for i in range(config.n_layers):
+        for hf_part, local_part in hf_to_local.items():
+            key = f"layers.{i}.{hf_part}.weight"
+            if key in state_dict:
+                new_state[f"layers.{i}.{local_part}.weight"] = state_dict[key]
+    return new_state
+
+
 # ANCHOR: SafetensorsLoader
 @LOADER.register("safetensors")
 class SafetensorsLoader(WeightLoaderABC):
@@ -118,12 +167,13 @@ class SafetensorsLoader(WeightLoaderABC):
         if info is None:
             raise ValueError(f"No HF model mapping for '{config.model_type}'")
         repo_id, filename, remap_fn = info
-        if path is None:
-            path = hf_hub_download(repo_id=repo_id, filename=filename)
-        state_dict = load_file(path, device="cpu")
+        if path is not None:
+            state_dict = load_file(path, device="cpu")
+        else:
+            state_dict = _load_safetensors_state_dict(repo_id, filename)
         mapped = remap_fn(state_dict, model, config)
         missing, unexpected = model.load_state_dict(mapped, strict=False)
-        return {"missing": missing, "unexpected": unexpected, "path": path}
+        return {"missing": missing, "unexpected": unexpected, "path": path or repo_id}
 
 
 # ENDANCHOR: SafetensorsLoader
