@@ -1,4 +1,4 @@
-# ─── SECTION: Learned / No Positional Encoding ──────────
+# ─── SECTION: Learned Positional Encoding ─────────────────
 import torch
 import torch.nn as nn
 
@@ -28,18 +28,4 @@ class LearnedPositionalEncoding(PositionalEncodingABC):
 
 
 # ENDANCHOR: LearnedPositionalEncoding
-
-
-# ANCHOR: NoPositionalEncoding
-@PE.register("none")
-class NoPositionalEncoding(PositionalEncodingABC):
-    @property
-    def injection_point(self) -> str:
-        return "embedding"
-
-    def forward(self, x: torch.Tensor, position_ids: torch.Tensor | None = None) -> torch.Tensor:
-        return x
-
-
-# ENDANCHOR: NoPositionalEncoding
-# ─── ENDSECTION: Learned / No Positional Encoding ────────
+# ─── ENDSECTION: Learned Positional Encoding ─────────────
