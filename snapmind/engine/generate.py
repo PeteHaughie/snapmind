@@ -38,7 +38,8 @@ class GenerateEngine:
     ) -> AsyncIterator[str]:
         kv_cache = self._make_kv_cache()
         input_ids = self.tokenizer.encode(prompt)
-        input_tensor = torch.tensor([input_ids], dtype=torch.long)
+        device = next(self.model.parameters()).device
+        input_tensor = torch.tensor([input_ids], dtype=torch.long, device=device)
 
         last_logits, _ = prefill(self.model, input_tensor, kv_cache)
         sampled = self.sampler.sample(last_logits[0, :], temperature=temperature, **sampler_kwargs)
@@ -59,7 +60,7 @@ class GenerateEngine:
                 kv_cache,
                 self.sampler,
                 temperature=temperature,
-                position_ids=torch.tensor([step]),
+                position_ids=torch.tensor([step], device=device),
                 **sampler_kwargs,
             )
             step += 1

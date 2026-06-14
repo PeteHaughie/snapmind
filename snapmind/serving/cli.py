@@ -60,7 +60,7 @@ KNOWN_MODELS: dict[str, dict[str, Any]] = {
 
 
 # ANCHOR: build_model
-def build_model(model_name: str) -> tuple[nn.Module, ModelConfig]:
+def build_model(model_name: str, device: str = "auto") -> tuple[nn.Module, ModelConfig]:
     from snapmind.core.config import ModelConfig
 
     spec = KNOWN_MODELS.get(model_name)
@@ -97,6 +97,10 @@ def build_model(model_name: str) -> tuple[nn.Module, ModelConfig]:
         model = LlamaModel(cfg)
 
     load_weights(model, model_name)
+    from snapmind.core.device import resolve_device
+
+    target = resolve_device(device)
+    model = model.to(target)
     return model, cfg
 
 
@@ -122,7 +126,7 @@ def cmd_generate(args: argparse.Namespace):
     from snapmind.sampling.greedy import GreedySampler
     from snapmind.tokenizer.hf import HFTokenizer
 
-    model, _ = build_model(args.model)
+    model, _ = build_model(args.model, device=args.device)
     tok = HFTokenizer(model_name=args.model)
     sampler = GreedySampler()
     engine = GenerateEngine(model, tok, sampler)
@@ -146,7 +150,7 @@ def cmd_serve(args: argparse.Namespace):
 
     from snapmind.serving.openai_api import create_app
 
-    model, cfg = build_model(args.model)
+    model, cfg = build_model(args.model, device=args.device)
     app = create_app(model, cfg, args.model)
     uvicorn.run(app, host=args.host, port=args.port)
 
@@ -174,12 +178,14 @@ def main() -> None:
 
     p_serve = sub.add_parser("serve", help="Start an OpenAI-compatible API server")
     p_serve.add_argument("--model", default="gpt2", choices=list(KNOWN_MODELS))
+    p_serve.add_argument("--device", default="auto", help="Device: auto, cpu, mps, cuda")
     p_serve.add_argument("--host", default="127.0.0.1")
     p_serve.add_argument("--port", type=int, default=8000)
     p_serve.set_defaults(func=cmd_serve)
 
     p_gen = sub.add_parser("generate", help="Generate text from a prompt")
     p_gen.add_argument("--model", default="gpt2", choices=list(KNOWN_MODELS))
+    p_gen.add_argument("--device", default="auto", help="Device: auto, cpu, mps, cuda")
     p_gen.add_argument("--prompt", default="Hello")
     p_gen.add_argument("--max-tokens", type=int, default=50)
     p_gen.set_defaults(func=cmd_generate)

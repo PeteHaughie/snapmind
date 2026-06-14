@@ -16,7 +16,8 @@ def decode_step(
     **sampler_kwargs,
 ) -> int:
     model.eval()
-    token_tensor = torch.tensor([[last_token_id]], dtype=torch.long)
+    device = next(model.parameters()).device
+    token_tensor = torch.tensor([[last_token_id]], dtype=torch.long, device=device)
     with torch.no_grad():
         logits = model(token_tensor, kv_cache=kv_cache, position_ids=position_ids)
     next_logits = logits[0, -1, :]
