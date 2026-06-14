@@ -1,6 +1,7 @@
 # ─── SECTION: RMSNorm ────────────────────────────────────
 import torch
 import torch.nn as nn
+
 from snapmind.core.registry import NORM
 from snapmind.layers.normalization.base import NormABC
 
@@ -18,5 +19,7 @@ class RMSNorm(NormABC):
         var = x.pow(2).mean(-1, keepdim=True)
         rms = torch.rsqrt(var + self.eps)
         return x * rms * self.weight
+
+
 # ENDANCHOR: RMSNorm
 # ─── ENDSECTION: RMSNorm ─────────────────────────────────

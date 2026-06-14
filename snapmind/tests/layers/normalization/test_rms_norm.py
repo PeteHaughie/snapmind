@@ -5,21 +5,25 @@ import torch
 class TestRMSNormABC:
     def test_cannot_instantiate_directly(self):
         from snapmind.layers.normalization.base import NormABC
+
         with pytest.raises(TypeError):
             NormABC()
 
     def test_minimal_subclass_works(self):
+
         from snapmind.layers.normalization.base import NormABC
-        import torch.nn as nn
+
         class MinimalNorm(NormABC):
             def forward(self, x):
                 return x
+
         m = MinimalNorm()
         t = torch.randn(2, 4)
         assert m(t).shape == (2, 4)
 
     def test_registered_in_norm_registry(self):
         from snapmind.core.registry import NORM
+
         assert "rmsnorm" in NORM
 
 
@@ -27,6 +31,7 @@ class TestRMSNorm:
     @pytest.fixture
     def rms_norm(self):
         from snapmind.layers.normalization.rms_norm import RMSNorm
+
         return RMSNorm(normalized_shape=32)
 
     def test_output_variance_approx_one(self, rms_norm):
@@ -50,6 +55,7 @@ class TestRMSNorm:
 
     def test_different_eps_affects_output(self):
         from snapmind.layers.normalization.rms_norm import RMSNorm
+
         x = torch.randn(2, 16, 32) * 0.001
         rn1 = RMSNorm(normalized_shape=32, eps=1.0)
         rn2 = RMSNorm(normalized_shape=32, eps=1e-5)

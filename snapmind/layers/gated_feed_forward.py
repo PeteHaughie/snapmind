@@ -1,5 +1,7 @@
 # ─── SECTION: Gated FeedForward ──────────────────────────
+import torch
 import torch.nn as nn
+
 from snapmind.layers.activation.silu import SiLU
 
 
@@ -13,7 +15,9 @@ class GatedFeedForward(nn.Module):
         self.act = SiLU()
         self.dropout = nn.Dropout(p=dropout)
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.dropout(self.down_proj(self.act(self.gate_proj(x)) * self.up_proj(x)))
+
+
 # ENDANCHOR: GatedFeedForward
 # ─── ENDSECTION: Gated FeedForward ───────────────────────

@@ -1,10 +1,10 @@
-import pytest
 import torch
 
 
 class TestPrefill:
     def test_prefill_returns_logits_and_ttft(self, tiny_gpt2, test_tokens):
         from snapmind.engine.prefill import prefill
+
         kv_cache = {i: {"k": None, "v": None} for i in range(tiny_gpt2.config.n_layers)}
         logits, ttft = prefill(tiny_gpt2, test_tokens, kv_cache)
         assert logits.shape == (2, 256)
@@ -13,6 +13,7 @@ class TestPrefill:
 
     def test_prefill_populates_kv_cache(self, tiny_gpt2, test_tokens):
         from snapmind.engine.prefill import prefill
+
         n = tiny_gpt2.config.n_layers
         kv_cache = {i: {"k": None, "v": None} for i in range(n)}
         prefill(tiny_gpt2, test_tokens, kv_cache)
@@ -22,6 +23,7 @@ class TestPrefill:
 
     def test_prefill_kv_cache_shapes(self, tiny_gpt2, test_tokens):
         from snapmind.engine.prefill import prefill
+
         cfg = tiny_gpt2.config
         kv_cache = {i: {"k": None, "v": None} for i in range(cfg.n_layers)}
         prefill(tiny_gpt2, test_tokens, kv_cache)
@@ -33,6 +35,7 @@ class TestPrefill:
 
     def test_prefill_is_deterministic(self, tiny_gpt2, test_tokens):
         from snapmind.engine.prefill import prefill
+
         kv_cache_1 = {i: {"k": None, "v": None} for i in range(tiny_gpt2.config.n_layers)}
         kv_cache_2 = {i: {"k": None, "v": None} for i in range(tiny_gpt2.config.n_layers)}
         logits_1, _ = prefill(tiny_gpt2, test_tokens, kv_cache_1)
@@ -41,6 +44,7 @@ class TestPrefill:
 
     def test_prefill_ttft_positive(self, tiny_gpt2, test_tokens):
         from snapmind.engine.prefill import prefill
+
         kv_cache = {i: {"k": None, "v": None} for i in range(tiny_gpt2.config.n_layers)}
         _, ttft = prefill(tiny_gpt2, test_tokens, kv_cache)
         assert ttft > 0

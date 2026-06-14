@@ -1,8 +1,7 @@
 # ─── SECTION: GELU ───────────────────────────────────────
-import math
-import torch
 import torch
 import torch.nn as nn
+
 from snapmind.core.registry import ACTIVATION
 from snapmind.layers.activation.base import ActivationABC
 
@@ -14,7 +13,9 @@ class GELU(ActivationABC):
         super().__init__()
         self._gelu = nn.GELU(approximate="tanh")
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self._gelu(x)
+
+
 # ENDANCHOR: GELU
 # ─── ENDSECTION: GELU ────────────────────────────────────

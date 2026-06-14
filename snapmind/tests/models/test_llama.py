@@ -1,4 +1,3 @@
-import pytest
 import torch
 
 
@@ -27,6 +26,7 @@ class TestLlamaModel:
 
     def test_uses_rms_norm(self, tiny_llama):
         from snapmind.layers.normalization.rms_norm import RMSNorm
+
         assert isinstance(tiny_llama.norm, RMSNorm)
         for layer in tiny_llama.layers:
             assert isinstance(layer.input_layernorm, RMSNorm)
@@ -34,18 +34,22 @@ class TestLlamaModel:
 
     def test_uses_gqa(self, tiny_llama):
         from snapmind.layers.attention.gqa import GroupedQueryAttention
+
         assert isinstance(tiny_llama.layers[0].self_attn, GroupedQueryAttention)
 
     def test_uses_gated_ffn(self, tiny_llama):
         from snapmind.layers.gated_feed_forward import GatedFeedForward
+
         assert isinstance(tiny_llama.layers[0].mlp, GatedFeedForward)
 
     def test_uses_rope(self, tiny_llama):
         from snapmind.layers.positional.rope import RotaryPositionalEncoding
+
         assert isinstance(tiny_llama.pe, RotaryPositionalEncoding)
 
     def test_registered_in_model_registry(self):
         from snapmind.core.registry import MODEL
+
         assert "llama" in MODEL
 
     def test_forward_with_kv_cache(self, tiny_llama):

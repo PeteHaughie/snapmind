@@ -5,20 +5,24 @@ import torch
 class TestSiLUABC:
     def test_cannot_instantiate_directly(self):
         from snapmind.layers.activation.base import ActivationABC
+
         with pytest.raises(TypeError):
             ActivationABC()
 
     def test_minimal_subclass_works(self):
         from snapmind.layers.activation.base import ActivationABC
+
         class MinimalAct(ActivationABC):
             def forward(self, x):
                 return x
+
         m = MinimalAct()
         t = torch.randn(2, 4)
         assert m(t).shape == (2, 4)
 
     def test_registered_in_activation_registry(self):
         from snapmind.core.registry import ACTIVATION
+
         assert "silu" in ACTIVATION
 
 
@@ -26,6 +30,7 @@ class TestSiLU:
     @pytest.fixture
     def silu(self):
         from snapmind.layers.activation.silu import SiLU
+
         return SiLU()
 
     def test_zero_input_gives_zero(self, silu):

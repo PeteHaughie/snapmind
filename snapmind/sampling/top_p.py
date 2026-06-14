@@ -1,6 +1,7 @@
 # ─── SECTION: Top-P Sampler ─────────────────────────────
 import torch
 import torch.nn.functional as F
+
 from snapmind.core.registry import SAMPLER
 from snapmind.sampling.base import SamplerABC
 
@@ -8,7 +9,9 @@ from snapmind.sampling.base import SamplerABC
 # ANCHOR: TopPSampler
 @SAMPLER.register("top_p")
 class TopPSampler(SamplerABC):
-    def sample(self, logits, temperature=1.0, top_p=0.9, top_k=0, **kwargs):
+    def sample(
+        self, logits: torch.Tensor, temperature: float = 1.0, top_p: float = 0.9, top_k: int = 0, **kwargs
+    ) -> int | torch.Tensor:
         if temperature == 0.0 or temperature < 1e-8:
             return logits.argmax(dim=-1)
 
@@ -27,5 +30,7 @@ class TopPSampler(SamplerABC):
         idx = idx.reshape(*batch_shape, 1)
         gathered = sorted_indices.gather(-1, idx)
         return gathered.squeeze(-1)
+
+
 # ENDANCHOR: TopPSampler
 # ─── ENDSECTION: Top-P Sampler ──────────────────────────

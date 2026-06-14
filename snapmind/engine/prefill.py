@@ -2,10 +2,15 @@
 import time
 
 import torch
+import torch.nn as nn
 
 
 # ANCHOR: prefill
-def prefill(model, tokens, kv_cache):
+def prefill(
+    model: nn.Module,
+    tokens: torch.Tensor,
+    kv_cache: dict,
+) -> tuple[torch.Tensor, float]:
     model.eval()
     with torch.no_grad():
         t0 = time.perf_counter()
@@ -14,5 +19,7 @@ def prefill(model, tokens, kv_cache):
     last_logits = logits[:, -1, :]
     ttft = t1 - t0
     return last_logits, ttft
+
+
 # ENDANCHOR: prefill
 # ─── ENDSECTION: Prefill ────────────────────────────────

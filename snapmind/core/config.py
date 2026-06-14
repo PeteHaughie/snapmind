@@ -1,6 +1,5 @@
 # ─── SECTION: Config ────────────────────────────────────
-from dataclasses import dataclass, field, asdict
-from typing import Optional
+from dataclasses import asdict, dataclass
 
 
 # ANCHOR: ModelConfig
@@ -9,9 +8,9 @@ class ModelConfig:
     model_type: str = "llama"
     d_model: int = 4096
     n_heads: int = 32
-    n_kv_heads: Optional[int] = None
+    n_kv_heads: int | None = None
     n_layers: int = 32
-    d_ff: Optional[int] = None
+    d_ff: int | None = None
     vocab_size: int = 32000
     max_seq_len: int = 8192
     norm_eps: float = 1e-5
@@ -43,6 +42,8 @@ class KVCacheConfig:
     max_seq_len: int = 8192
     dtype: str = "bfloat16"
     device: str = "auto"
+
+
 # ENDANCHOR: KVCacheConfig
 
 
@@ -52,5 +53,7 @@ class EngineConfig:
     max_batch_tokens: int = 4096
     device: str = "auto"
     dtype: str = "bfloat16"
+
+
 # ENDANCHOR: EngineConfig
 # ─── ENDSECTION: Config ─────────────────────────────────

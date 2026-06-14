@@ -1,6 +1,9 @@
 # ─── SECTION: Base Model ABC ─────────────────────────────
 import abc
+
+import torch
 import torch.nn as nn
+
 from snapmind.core.config import ModelConfig
 
 
@@ -11,7 +14,10 @@ class BaseModelABC(nn.Module, abc.ABC):
         self.config = config
 
     @abc.abstractmethod
-    def forward(self, tokens, kv_cache=None, position_ids=None):
-        ...
+    def forward(
+        self, tokens: torch.Tensor, kv_cache: dict | None = None, position_ids: torch.Tensor | None = None
+    ) -> torch.Tensor: ...
+
+
 # ENDANCHOR: BaseModelABC
 # ─── ENDSECTION: Base Model ABC ──────────────────────────

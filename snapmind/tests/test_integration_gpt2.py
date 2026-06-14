@@ -5,8 +5,8 @@ import torch
 @pytest.fixture(scope="module")
 def gpt2_model():
     from snapmind.core.config import ModelConfig
-    from snapmind.models.gpt2 import GPT2Model
     from snapmind.loaders.safetensors import SafetensorsLoader
+    from snapmind.models.gpt2 import GPT2Model
 
     config = ModelConfig(
         model_type="gpt2",
@@ -28,7 +28,7 @@ def gpt2_model():
     model.eval()
     with torch.no_grad():
         loader = SafetensorsLoader()
-        result = loader.load(None, model, config)
+        loader.load(None, model, config)
     return model
 
 
@@ -36,6 +36,7 @@ def gpt2_model():
 def gpt2_state_dict():
     from huggingface_hub import hf_hub_download
     from safetensors.torch import load_file
+
     path = hf_hub_download(repo_id="openai-community/gpt2", filename="model.safetensors")
     return load_file(path, device="cpu")
 
@@ -47,17 +48,28 @@ class TestGPT2IntegrationLoad:
 
     def test_all_expected_keys_present(self, gpt2_state_dict):
         expected_prefixes = [
-            "wte.weight", "wpe.weight", "ln_f.weight", "ln_f.bias",
+            "wte.weight",
+            "wpe.weight",
+            "ln_f.weight",
+            "ln_f.bias",
         ]
         for i in range(12):
-            expected_prefixes.extend([
-                f"h.{i}.ln_1.weight", f"h.{i}.ln_1.bias",
-                f"h.{i}.ln_2.weight", f"h.{i}.ln_2.bias",
-                f"h.{i}.attn.c_attn.weight", f"h.{i}.attn.c_attn.bias",
-                f"h.{i}.attn.c_proj.weight", f"h.{i}.attn.c_proj.bias",
-                f"h.{i}.mlp.c_fc.weight", f"h.{i}.mlp.c_fc.bias",
-                f"h.{i}.mlp.c_proj.weight", f"h.{i}.mlp.c_proj.bias",
-            ])
+            expected_prefixes.extend(
+                [
+                    f"h.{i}.ln_1.weight",
+                    f"h.{i}.ln_1.bias",
+                    f"h.{i}.ln_2.weight",
+                    f"h.{i}.ln_2.bias",
+                    f"h.{i}.attn.c_attn.weight",
+                    f"h.{i}.attn.c_attn.bias",
+                    f"h.{i}.attn.c_proj.weight",
+                    f"h.{i}.attn.c_proj.bias",
+                    f"h.{i}.mlp.c_fc.weight",
+                    f"h.{i}.mlp.c_fc.bias",
+                    f"h.{i}.mlp.c_proj.weight",
+                    f"h.{i}.mlp.c_proj.bias",
+                ]
+            )
         for key in expected_prefixes:
             assert key in gpt2_state_dict, f"Missing key: {key}"
 
@@ -105,6 +117,7 @@ class TestGPT2IntegrationForward:
 class TestGPT2IntegrationTokenizer:
     def test_tokenizer_encodes(self):
         from snapmind.tokenizer.hf import HFTokenizer
+
         tok = HFTokenizer()
         ids = tok.encode("Hello, my name is")
         assert isinstance(ids, list)
@@ -113,6 +126,7 @@ class TestGPT2IntegrationTokenizer:
 
     def test_tokenizer_decode_round_trip(self):
         from snapmind.tokenizer.hf import HFTokenizer
+
         tok = HFTokenizer()
         text = "Hello, my name is GPT-2"
         ids = tok.encode(text)
@@ -121,11 +135,13 @@ class TestGPT2IntegrationTokenizer:
 
     def test_tokenizer_vocab_size(self):
         from snapmind.tokenizer.hf import HFTokenizer
+
         tok = HFTokenizer()
         assert tok.vocab_size() == 50257
 
     def test_tokenizer_matches_model_vocab(self, gpt2_model):
         from snapmind.tokenizer.hf import HFTokenizer
+
         tok = HFTokenizer()
         assert tok.vocab_size() == gpt2_model.config.vocab_size
 
@@ -134,6 +150,7 @@ class TestGPT2IntegrationTokenizer:
 class TestGPT2IntegrationPrediction:
     def test_predicts_plausible_next_token(self, gpt2_model):
         from snapmind.tokenizer.hf import HFTokenizer
+
         tok = HFTokenizer()
         text = "The capital of France is"
         input_ids = torch.tensor([tok.encode(text)])

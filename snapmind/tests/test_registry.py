@@ -1,4 +1,5 @@
 import pytest
+
 from snapmind.core.registry import Registry, RegistryError
 
 

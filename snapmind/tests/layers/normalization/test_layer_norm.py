@@ -1,4 +1,3 @@
-import pytest
 import torch
 
 
@@ -22,7 +21,9 @@ class TestLayerNormProperties:
     def test_output_has_unit_variance(self, layer_norm):
         x = torch.randn(2, 16, 32)
         result = layer_norm(x)
-        assert torch.allclose(result.std(dim=-1, unbiased=False), torch.ones_like(result.std(dim=-1, unbiased=False)), atol=1e-4)
+        assert torch.allclose(
+            result.std(dim=-1, unbiased=False), torch.ones_like(result.std(dim=-1, unbiased=False)), atol=1e-4
+        )
 
     def test_affine_transform_applied(self, layer_norm):
         x = torch.randn(2, 16, 32)

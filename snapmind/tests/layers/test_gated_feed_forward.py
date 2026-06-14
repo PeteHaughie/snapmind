@@ -6,6 +6,7 @@ class TestGatedFeedForward:
     @pytest.fixture
     def gated_ffn(self):
         from snapmind.layers.gated_feed_forward import GatedFeedForward
+
         return GatedFeedForward(d_model=32, d_ff=128)
 
     def test_output_shape(self, gated_ffn):

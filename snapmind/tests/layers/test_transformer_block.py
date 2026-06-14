@@ -1,10 +1,10 @@
-import pytest
 import torch
 
 
 class TestTransformerBlockShape:
     def test_output_shape_matches_input(self, tiny_config, test_tokens):
         from snapmind.layers.transformer_block import TransformerBlock
+
         block = TransformerBlock(
             config=tiny_config,
             layer_idx=0,
@@ -15,6 +15,7 @@ class TestTransformerBlockShape:
 
     def test_batch_dimension_preserved(self, tiny_config):
         from snapmind.layers.transformer_block import TransformerBlock
+
         block = TransformerBlock(config=tiny_config, layer_idx=0)
         x = torch.randn(4, 16, tiny_config.d_model)
         result = block(x)
@@ -24,6 +25,7 @@ class TestTransformerBlockShape:
 class TestTransformerBlockProperties:
     def test_residual_is_preserved(self, tiny_config):
         from snapmind.layers.transformer_block import TransformerBlock
+
         block = TransformerBlock(config=tiny_config, layer_idx=0)
         x = torch.randn(2, 16, tiny_config.d_model)
         result = block(x)
@@ -31,6 +33,7 @@ class TestTransformerBlockProperties:
 
     def test_residual_adds_positive_contribution(self, tiny_config):
         from snapmind.layers.transformer_block import TransformerBlock
+
         block = TransformerBlock(config=tiny_config, layer_idx=0)
         x = torch.randn(2, 16, tiny_config.d_model)
         result = block(x)
@@ -38,6 +41,7 @@ class TestTransformerBlockProperties:
 
     def test_all_outputs_finite(self, tiny_config):
         from snapmind.layers.transformer_block import TransformerBlock
+
         block = TransformerBlock(config=tiny_config, layer_idx=0)
         x = torch.randn(2, 16, tiny_config.d_model)
         result = block(x)
@@ -47,6 +51,7 @@ class TestTransformerBlockProperties:
 class TestTransformerBlockGradients:
     def test_gradients_flow_through_block(self, tiny_config):
         from snapmind.layers.transformer_block import TransformerBlock
+
         block = TransformerBlock(config=tiny_config, layer_idx=0)
         x = torch.randn(2, 16, tiny_config.d_model, requires_grad=True)
         result = block(x)

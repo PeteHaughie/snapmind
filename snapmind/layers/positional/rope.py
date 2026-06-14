@@ -1,13 +1,18 @@
 # ─── SECTION: Rotary Positional Encoding ─────────────────
 import torch
-import torch.nn as nn
+
 from snapmind.core.registry import PE
 from snapmind.layers.positional.base import PositionalEncodingABC
+
+COS_SIN = tuple[torch.Tensor, torch.Tensor]  # noqa: F841
 
 
 # ANCHOR: RotaryPositionalEncoding
 @PE.register("rope")
 class RotaryPositionalEncoding(PositionalEncodingABC):
+    cos_cached: torch.Tensor
+    sin_cached: torch.Tensor
+
     def __init__(self, dim: int, max_seq_len: int = 8192, theta: float = 10000.0):
         super().__init__()
         self.dim = dim
@@ -28,10 +33,10 @@ class RotaryPositionalEncoding(PositionalEncodingABC):
         self.register_buffer("sin_cached", emb_sin)
 
     @property
-    def injection_point(self):
+    def injection_point(self) -> str:
         return self._injection_point
 
-    def forward(self, x, position_ids=None):
+    def forward(self, x: torch.Tensor, position_ids: torch.Tensor | None = None) -> torch.Tensor:
         return x
 
     @staticmethod
@@ -39,7 +44,9 @@ class RotaryPositionalEncoding(PositionalEncodingABC):
         x1, x2 = x[..., : x.shape[-1] // 2], x[..., x.shape[-1] // 2 :]
         return torch.cat((-x2, x1), dim=-1)
 
-    def apply_to_qk(self, q: torch.Tensor, k: torch.Tensor, position_ids: torch.Tensor | None = None):
+    def apply_to_qk(
+        self, q: torch.Tensor, k: torch.Tensor, position_ids: torch.Tensor | None = None
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         if position_ids is None:
             seq_len = q.shape[-2]
             cos = self.cos_cached[:seq_len].unsqueeze(0).unsqueeze(0)
@@ -50,5 +57,7 @@ class RotaryPositionalEncoding(PositionalEncodingABC):
         q_rot = q * cos + self._rotate_half(q) * sin
         k_rot = k * cos + self._rotate_half(k) * sin
         return q_rot, k_rot
+
+
 # ENDANCHOR: RotaryPositionalEncoding
 # ─── ENDSECTION: Rotary Positional Encoding ──────────────

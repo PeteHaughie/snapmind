@@ -5,6 +5,7 @@ import torch
 @pytest.fixture
 def naive_cache():
     from snapmind.kv_cache.naive import NaiveKVCache
+
     return NaiveKVCache(max_seq_len=128, n_layers=2, n_heads=4, head_dim=64)
 
 
@@ -71,12 +72,12 @@ class TestNaiveKVCacheStateManagement:
         naive_cache.reset()
         for i in range(2):
             k_out, _ = naive_cache.fetch(i)
-            assert k_out is None
+            assert k_out.numel() == 0
 
-    def test_empty_cache_returns_none(self, naive_cache):
+    def test_empty_cache_returns_empty(self, naive_cache):
         k, v = naive_cache.fetch(0)
-        assert k is None
-        assert v is None
+        assert k.numel() == 0
+        assert v.numel() == 0
 
 
 class TestNaiveKVCacheObservability:

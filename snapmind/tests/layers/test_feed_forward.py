@@ -1,10 +1,10 @@
-import pytest
 import torch
 
 
 class TestFeedForwardShape:
     def test_output_shape_matches_input(self, tiny_config):
         from snapmind.layers.feed_forward import FeedForward
+
         ffn = FeedForward(
             d_model=tiny_config.d_model,
             d_ff=tiny_config.d_ff,
@@ -17,6 +17,7 @@ class TestFeedForwardShape:
 
     def test_batch_dimension_preserved(self, tiny_config):
         from snapmind.layers.feed_forward import FeedForward
+
         ffn = FeedForward(
             d_model=tiny_config.d_model,
             d_ff=tiny_config.d_ff,
@@ -31,6 +32,7 @@ class TestFeedForwardShape:
 class TestFeedForwardValues:
     def test_biased_output(self, tiny_config):
         from snapmind.layers.feed_forward import FeedForward
+
         ffn = FeedForward(
             d_model=tiny_config.d_model,
             d_ff=tiny_config.d_ff,
@@ -45,6 +47,7 @@ class TestFeedForwardValues:
 
     def test_all_outputs_finite(self, tiny_config):
         from snapmind.layers.feed_forward import FeedForward
+
         ffn = FeedForward(
             d_model=tiny_config.d_model,
             d_ff=tiny_config.d_ff,
@@ -59,6 +62,7 @@ class TestFeedForwardValues:
 class TestFeedForwardGradients:
     def test_gradients_flow(self, tiny_config):
         from snapmind.layers.feed_forward import FeedForward
+
         ffn = FeedForward(
             d_model=tiny_config.d_model,
             d_ff=tiny_config.d_ff,

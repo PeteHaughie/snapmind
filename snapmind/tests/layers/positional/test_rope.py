@@ -5,23 +5,28 @@ import torch
 class TestRoPEABC:
     def test_cannot_instantiate_directly(self):
         from snapmind.layers.positional.base import PositionalEncodingABC
+
         with pytest.raises(TypeError):
             PositionalEncodingABC()
 
     def test_minimal_subclass_works(self):
         from snapmind.layers.positional.base import PositionalEncodingABC
+
         class MinimalPE(PositionalEncodingABC):
             @property
             def injection_point(self):
                 return "embedding"
+
             def forward(self, x, position_ids=None):
                 return x
+
         m = MinimalPE()
         t = torch.randn(2, 4, 8)
         assert m(t).shape == (2, 4, 8)
 
     def test_registered_in_pe_registry(self):
         from snapmind.core.registry import PE
+
         assert "rope" in PE
 
 
@@ -29,6 +34,7 @@ class TestRotaryPositionalEncoding:
     @pytest.fixture
     def rope(self):
         from snapmind.layers.positional.rope import RotaryPositionalEncoding
+
         return RotaryPositionalEncoding(dim=8, max_seq_len=64)
 
     def test_forward_is_identity(self, rope):

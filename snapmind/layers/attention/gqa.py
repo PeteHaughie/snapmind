@@ -2,8 +2,10 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+
 from snapmind.core.registry import ATTENTION
 from snapmind.layers.attention.base import AttentionABC
+from snapmind.layers.positional.base import PositionalEncodingABC
 
 
 # ANCHOR: GroupedQueryAttention
@@ -16,7 +18,7 @@ class GroupedQueryAttention(AttentionABC):
         n_kv_heads: int | None = None,
         dropout: float = 0.0,
         bias: bool = False,
-        pe=None,
+        pe: PositionalEncodingABC | None = None,
     ):
         super().__init__()
         assert d_model % n_heads == 0
@@ -41,7 +43,13 @@ class GroupedQueryAttention(AttentionABC):
         batch, _, seq_len, _ = x.shape
         return x.transpose(1, 2).reshape(batch, seq_len, self.d_model)
 
-    def forward(self, x, kv_cache=None, position_ids=None, mask=None):
+    def forward(
+        self,
+        x: torch.Tensor,
+        kv_cache: dict | None = None,
+        position_ids: torch.Tensor | None = None,
+        mask: torch.Tensor | None = None,
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         q = self._split_heads(self.q_proj(x), self.n_heads)
         k = self._split_heads(self.k_proj(x), self.n_kv_heads)
         v = self._split_heads(self.v_proj(x), self.n_kv_heads)
@@ -60,7 +68,7 @@ class GroupedQueryAttention(AttentionABC):
             k = k.repeat_interleave(self.n_rep, dim=1)
             v = v.repeat_interleave(self.n_rep, dim=1)
 
-        scale = self.head_dim ** -0.5
+        scale = self.head_dim**-0.5
         attn = torch.matmul(q, k.transpose(-2, -1)) * scale
 
         if mask is not None:
@@ -73,5 +81,7 @@ class GroupedQueryAttention(AttentionABC):
         out = self._merge_heads(out)
         out = self.out_proj(out)
         return out, attn_weights
+
+
 # ENDANCHOR: GroupedQueryAttention
 # ─── ENDSECTION: Grouped Query Attention ─────────────────

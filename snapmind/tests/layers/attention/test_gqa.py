@@ -5,14 +5,17 @@ import torch
 class TestGQAABC:
     def test_cannot_instantiate_directly(self):
         from snapmind.layers.attention.base import AttentionABC
+
         with pytest.raises(TypeError):
             AttentionABC()
 
     def test_minimal_subclass_works(self):
         from snapmind.layers.attention.base import AttentionABC
+
         class MinimalAttn(AttentionABC):
             def forward(self, x, kv_cache=None, position_ids=None, mask=None):
                 return x, None
+
         m = MinimalAttn()
         t = torch.randn(2, 4, 8)
         out, _ = m(t)
@@ -20,6 +23,7 @@ class TestGQAABC:
 
     def test_registered_in_attention_registry(self):
         from snapmind.core.registry import ATTENTION
+
         assert "gqa" in ATTENTION
 
 
@@ -27,6 +31,7 @@ class TestGroupedQueryAttention:
     @pytest.fixture
     def gqa(self):
         from snapmind.layers.attention.gqa import GroupedQueryAttention
+
         return GroupedQueryAttention(d_model=32, n_heads=4, n_kv_heads=2)
 
     def test_attention_weights_sum_to_one(self, gqa):
@@ -46,6 +51,7 @@ class TestGroupedQueryAttention:
 
     def test_causal_mask_prevents_future(self, gqa):
         from snapmind.layers.attention.sdpa import create_causal_mask
+
         x = torch.randn(1, 8, 32)
         mask = create_causal_mask(8)
         _, weights = gqa(x, mask=mask)

@@ -1,6 +1,7 @@
 # ─── SECTION: LayerNorm ──────────────────────────────────
 import torch
 import torch.nn as nn
+
 from snapmind.core.registry import NORM
 from snapmind.layers.normalization.base import NormABC
 
@@ -15,7 +16,7 @@ class LayerNorm(NormABC):
         self.weight = nn.Parameter(torch.ones(normalized_shape))
         self.bias = nn.Parameter(torch.zeros(normalized_shape)) if elementwise_affine else None
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         mean = x.mean(dim=-1, keepdim=True)
         var = x.var(dim=-1, keepdim=True, unbiased=False)
         x_norm = (x - mean) / torch.sqrt(var + self.eps)
@@ -24,5 +25,7 @@ class LayerNorm(NormABC):
         else:
             x_norm = x_norm * self.weight
         return x_norm
+
+
 # ENDANCHOR: LayerNorm
 # ─── ENDSECTION: LayerNorm ───────────────────────────────

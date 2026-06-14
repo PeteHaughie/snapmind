@@ -1,23 +1,27 @@
 # ─── SECTION: Safetensors Loader ────────────────────────
-import torch
+from collections.abc import Callable
+
+import torch.nn as nn
 from huggingface_hub import hf_hub_download
 from safetensors.torch import load_file
+
+from snapmind.core.config import ModelConfig
 from snapmind.core.registry import LOADER
 from snapmind.loaders.base import WeightLoaderABC
 
+_HF_MODEL_MAP: dict[str, tuple[str, str, Callable]] = {}
 
-_HF_MODEL_MAP: dict = {}
 
-
-def register_hf_model(model_type: str, repo_id: str, filename: str = "model.safetensors"):
-    def wrapper(remap_fn):
+def register_hf_model(model_type: str, repo_id: str, filename: str = "model.safetensors") -> Callable:
+    def wrapper(remap_fn: Callable) -> Callable:
         _HF_MODEL_MAP[model_type] = (repo_id, filename, remap_fn)
         return remap_fn
+
     return wrapper
 
 
 @register_hf_model("gpt2", "openai-community/gpt2")
-def _remap_gpt2(state_dict, model, config):
+def _remap_gpt2(state_dict: dict, model: nn.Module, config: ModelConfig) -> dict:
     mapping = {
         "wte.weight": "embed.weight",
         "ln_f.weight": "ln_f.weight",
@@ -55,13 +59,13 @@ def _remap_gpt2(state_dict, model, config):
             combined_w = state_dict[c_attn_w].t()
             d = config.d_model
             new_state[f"layers.{i}.self_attn.q_proj.weight"] = combined_w[:d]
-            new_state[f"layers.{i}.self_attn.k_proj.weight"] = combined_w[d:2*d]
-            new_state[f"layers.{i}.self_attn.v_proj.weight"] = combined_w[2*d:]
+            new_state[f"layers.{i}.self_attn.k_proj.weight"] = combined_w[d : 2 * d]
+            new_state[f"layers.{i}.self_attn.v_proj.weight"] = combined_w[2 * d :]
             if c_attn_b in state_dict:
                 b = state_dict[c_attn_b]
                 new_state[f"layers.{i}.self_attn.q_proj.bias"] = b[:d]
-                new_state[f"layers.{i}.self_attn.k_proj.bias"] = b[d:2*d]
-                new_state[f"layers.{i}.self_attn.v_proj.bias"] = b[2*d:]
+                new_state[f"layers.{i}.self_attn.k_proj.bias"] = b[d : 2 * d]
+                new_state[f"layers.{i}.self_attn.v_proj.bias"] = b[2 * d :]
 
     if "wpe.weight" in state_dict and hasattr(model, "pe") and hasattr(model.pe, "pe"):
         new_state["pe.pe.weight"] = state_dict["wpe.weight"]
@@ -70,7 +74,7 @@ def _remap_gpt2(state_dict, model, config):
 
 
 @register_hf_model("tinyllama", "TinyLlama/TinyLlama-1.1B-Chat-v1.0")
-def _remap_llama(state_dict, model, config):
+def _remap_llama(state_dict: dict, model: nn.Module, config: ModelConfig) -> dict:
     new_state = {}
     top = {
         "model.embed_tokens.weight": "embed.weight",
@@ -104,7 +108,7 @@ def _remap_llama(state_dict, model, config):
 # ANCHOR: SafetensorsLoader
 @LOADER.register("safetensors")
 class SafetensorsLoader(WeightLoaderABC):
-    def load(self, path, model, config):
+    def load(self, path: str | None, model: nn.Module, config: ModelConfig) -> dict:
         info = _HF_MODEL_MAP.get(config.model_type)
         if info is None:
             raise ValueError(f"No HF model mapping for '{config.model_type}'")
@@ -115,5 +119,7 @@ class SafetensorsLoader(WeightLoaderABC):
         mapped = remap_fn(state_dict, model, config)
         missing, unexpected = model.load_state_dict(mapped, strict=False)
         return {"missing": missing, "unexpected": unexpected, "path": path}
+
+
 # ENDANCHOR: SafetensorsLoader
 # ─── ENDSECTION: Safetensors Loader ─────────────────────

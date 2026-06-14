@@ -5,12 +5,13 @@ import torch
 class TestBaseModelABC:
     def test_cannot_instantiate_directly(self):
         from snapmind.models.base import BaseModelABC
+
         with pytest.raises(TypeError):
             BaseModelABC()
 
     def test_minimal_subclass_works(self):
-        from snapmind.models.base import BaseModelABC
         from snapmind.core.config import ModelConfig
+        from snapmind.models.base import BaseModelABC
 
         class MinimalModel(BaseModelABC):
             def __init__(self, config):
@@ -27,8 +28,8 @@ class TestBaseModelABC:
         assert result.shape == (2, 16, 32)
 
     def test_config_is_stored(self):
-        from snapmind.models.base import BaseModelABC
         from snapmind.core.config import ModelConfig
+        from snapmind.models.base import BaseModelABC
 
         class MinimalModel(BaseModelABC):
             def __init__(self, config):

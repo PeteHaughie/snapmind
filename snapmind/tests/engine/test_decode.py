@@ -13,26 +13,27 @@ def setup_decode(tiny_gpt2):
 
 class TestDecodeStep:
     def test_decode_returns_int_token(self, setup_decode):
-        from snapmind.sampling.greedy import GreedySampler
         from snapmind.engine.decode import decode_step
+        from snapmind.sampling.greedy import GreedySampler
+
         model, kv_cache = setup_decode
         token_id = decode_step(model, 42, kv_cache, GreedySampler())
         assert isinstance(token_id, int)
         assert 0 <= token_id < model.config.vocab_size
 
     def test_decode_extends_kv_cache(self, setup_decode):
-        from snapmind.sampling.greedy import GreedySampler
         from snapmind.engine.decode import decode_step
+        from snapmind.sampling.greedy import GreedySampler
+
         model, kv_cache = setup_decode
-        cfg = model.config
         orig_len = kv_cache[0]["k"].shape[-2]
         decode_step(model, 42, kv_cache, GreedySampler())
-        head_dim = cfg.d_model // cfg.n_heads
         assert kv_cache[0]["k"].shape[-2] == orig_len + 1
 
     def test_decode_deterministic_greedy(self, setup_decode):
-        from snapmind.sampling.greedy import GreedySampler
         from snapmind.engine.decode import decode_step
+        from snapmind.sampling.greedy import GreedySampler
+
         model1, kv1 = setup_decode
         model2, kv2 = setup_decode
         # rebuild separate kv caches
@@ -44,8 +45,9 @@ class TestDecodeStep:
         assert t1 == t2
 
     def test_decode_all_tokens_finite(self, setup_decode):
-        from snapmind.sampling.greedy import GreedySampler
         from snapmind.engine.decode import decode_step
+        from snapmind.sampling.greedy import GreedySampler
+
         model, kv_cache = setup_decode
         tokens = []
         for _ in range(5):
