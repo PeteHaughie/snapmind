@@ -96,6 +96,12 @@ def build_model(model_name: str, device: str = "auto") -> tuple[nn.Module, Model
 
         model = LlamaModel(cfg)
 
+    import torch
+
+    # Convert to bf16 before loading weights to reduce memory pressure
+    for p in model.parameters():
+        p.data = p.data.to(torch.bfloat16)
+
     load_weights(model, model_name)
     from snapmind.core.device import resolve_device
 

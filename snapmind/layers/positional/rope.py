@@ -49,11 +49,11 @@ class RotaryPositionalEncoding(PositionalEncodingABC):
     ) -> tuple[torch.Tensor, torch.Tensor]:
         if position_ids is None:
             seq_len = q.shape[-2]
-            cos = self.cos_cached[:seq_len].unsqueeze(0).unsqueeze(0)
-            sin = self.sin_cached[:seq_len].unsqueeze(0).unsqueeze(0)
+            cos = self.cos_cached[:seq_len].unsqueeze(0).unsqueeze(0).to(q.dtype)
+            sin = self.sin_cached[:seq_len].unsqueeze(0).unsqueeze(0).to(q.dtype)
         else:
-            cos = self.cos_cached[position_ids].unsqueeze(1)
-            sin = self.sin_cached[position_ids].unsqueeze(1)
+            cos = self.cos_cached[position_ids].unsqueeze(1).to(q.dtype)
+            sin = self.sin_cached[position_ids].unsqueeze(1).to(q.dtype)
         q_rot = q * cos + self._rotate_half(q) * sin
         k_rot = k * cos + self._rotate_half(k) * sin
         return q_rot, k_rot
