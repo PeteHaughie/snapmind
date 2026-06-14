@@ -10,6 +10,7 @@ This directory documents every significant architectural decision for snapmind.
 | 002 | [Per-File Model Architecture Definitions](002-per-file-model-architectures.md) | Accepted |
 | 003 | [PyTorch-Only Backend](003-pytorch-only-backend.md) | Accepted |
 | 004 | [AI-Friendly Source Annotations](004-ai-friendly-annotations.md) | Accepted |
+| 005 | [Engine Pipeline Design](005-engine-pipeline.md) | Accepted |
 
 ## Template
 

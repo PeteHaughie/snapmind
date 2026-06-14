@@ -1,46 +1,56 @@
-# snapmind Framework — Agent Instructions
+# snapmind — Framework Agent Config
 
-This directory contains configuration for AI agents contributing to the snapmind framework source code.
+## How to Add a New Component
 
-## Files
+1. Create an ABC in the appropriate `base.py` file (or add to existing one)
+2. Create the implementation file with `@REGISTRY.register("key")` decorator
+3. Import the implementation in `snapmind/__init__.py` to trigger registration
+4. Add tests: ABC contract + mathematical property + architecture conformance
+5. If adding new layer types, add them to `layers/<type>/<name>.py`
 
-- `AGENTS.md` — This file. Agent instructions for framework contributions.
-- `SYSTEM.md` — System prompt additions for LLM tooling when working on this codebase.
-- `MEMORY.md` — Persistent session memory shared across agent sessions.
+## Registry Reference
 
-## Code Navigation
+| Component | Registry | ABC Location | Key Convention |
+|---|---|---|---|
+| Attention | `ATTENTION` | `layers/attention/base.py` | `"sdpa"`, `"gqa"` |
+| Positional Encoding | `PE` | `layers/positional/base.py` | `"learned"`, `"rope"`, `"none"` |
+| Normalization | `NORM` | `layers/normalization/base.py` | `"layernorm"`, `"rmsnorm"` |
+| Activation | `ACTIVATION` | `layers/activation/base.py` | `"gelu"`, `"silu"` |
+| KV Cache | `KV_CACHE` | `kv_cache/base.py` | `"naive"` |
+| Tokenizer | `TOKENIZER` | `tokenizer/base.py` | `"hf"` |
+| Sampler | `SAMPLER` | `sampling/base.py` | `"greedy"`, `"top_p"`, `"temperature"` |
+| Weight Loader | `LOADER` | `loaders/base.py` | `"safetensors"` |
+| Model | `MODEL` | `models/base.py` | `"gpt2"`, `"llama"` |
 
-Source files use section markers for easy parsing. Every file has:
+## Layer Hierarchy
 
 ```
-# ─── SECTION: <Module Name> ───────────────────────
-...
-# ─── ENDSECTION: <Module Name> ────────────────────
+TransformerBlock
+├── Norm (input)
+├── Attention (pluggable via config.attention_type)
+│   ├── Q, K, V projections
+│   ├── PE.apply_to_qk (for RoPE)
+│   └── Scaled dot-product / GQA
+├── Residual +
+├── Norm (post-attention)
+├── FeedForward / GatedFeedForward (pluggable via model choice)
+└── Residual +
 ```
 
-Key decision points inside sections use anchor markers:
-
-```
-# ANCHOR: <name>
-...
-# ENDANCHOR: <name>
-```
-
-## Registry Locations
-
-All registries are instantiated in `snapmind/core/registry.py`. Import the ones you need:
+## Test Pattern
 
 ```python
-from snapmind.core.registry import (
-    ATTENTION, PE, NORM, ACTIVATION,
-    KV_CACHE, SAMPLER, TOKENIZER, LOADER, MODEL,
-)
+# Category 1: ABC Contract
+def test_cannot_instantiate_directly():
+    with pytest.raises(TypeError):
+        SomeABC()
+
+# Category 2: Mathematical Property
+def test_output_property():
+    result = component(input)
+    assert some_invariant(result)
+
+# Category 3: Architecture Conformance
+def test_model_property():
+    assert model.lm_head.weight is model.embed.weight  # GPT-2 weight tying
 ```
-
-## Experiment Logging
-
-Any implementation based on a paper must be logged in `docs/experiments/<name>/` with:
-- Paper reference (arXiv/HF URL)
-- Status (accepted / rejected / experimental)
-- Rejection reason if applicable
-- Results

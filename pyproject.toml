@@ -1,0 +1,34 @@
+[project]
+name = "snapmind"
+version = "0.1.0"
+description = "Modular pure-Python transformer inference framework"
+requires-python = ">=3.10"
+dependencies = [
+    "torch>=2.0.0",
+    "huggingface_hub>=0.20",
+    "safetensors>=0.4",
+    "tiktoken>=0.5",
+]
+
+[project.scripts]
+snapmind = "snapmind.serving.cli:main"
+
+[project.optional-dependencies]
+serve = [
+    "fastapi>=0.100",
+    "uvicorn>=0.20",
+]
+
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["snapmind*"]
+
+[dependency-groups]
+dev = ["pytest>=8.0"]
+
+[tool.pytest.ini_options]
+testpaths = ["snapmind/tests"]
+markers = ["slow: marks tests as slow (downloads large model weights)"]

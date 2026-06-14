@@ -22,4 +22,6 @@ docs/experiments/<short-descriptive-name>/
 
 ## Index
 
-(none yet)
+| Experiment | Status | Description |
+|---|---|---|
+| (none yet) | — | — |

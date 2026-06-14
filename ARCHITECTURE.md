@@ -305,6 +305,105 @@ docs/experiments/sentence-level-kv-eviction/
 
 Status values: `accepted` (merged), `experimental` (implemented but not merged), `rejected` (tested and discarded), `pending` (planned).
 
+## Testing Architecture
+
+snapmind uses four categories of tests, layered from the most abstract (contracts) to the most concrete (architecture conformance):
+
+### Category 1: ABC Contract Tests
+
+Every ABC has a `test_base.py` proving its contract is sound:
+
+- Abstract methods cannot be instantiated
+- Minimal subclass with valid stubs instantiates correctly
+- All required method signatures are enforced
+
+These tests are the first line of defense against design rot: if an ABC gains a required method, the contract test fails until a stub is added.
+
+### Category 2: Mathematical Property Tests
+
+Every implementation proves its mathematical specification holds. These tests are **model-agnostic** — they apply regardless of which model architecture uses the component:
+
+| Component | Property Tested |
+|---|---|
+| `ScaledDotProductAttention` | Attention weights sum to 1; causal mask blocks future positions |
+| `LayerNorm` | Output has mean ≈ 0, std ≈ 1; affine shift preserves shape |
+| `GELU` | Known values at -1, 0, 1; smoothness |
+| `FeedForward` | Output shape matches; activation function is applied |
+| `NaiveKVCache` | Store/fetch round-trip; appending grows sequence dimension |
+
+### Category 3: Architecture Conformance Tests
+
+Every model proves it matches its reference architecture's published specifications:
+
+```python
+class TestGPT2Model:
+    def test_parameter_count(self):
+        # GPT-2 124M has approximately 124 million parameters
+        assert abs(n_params - 124_000_000) < 1_000_000
+
+    def test_weight_tying(self):
+        # GPT-2 ties embedding and lm_head weights
+        assert model.lm_head.weight is model.embed.weight
+
+    def test_output_logits(self):
+        # Forward pass produces valid logits over vocab
+        logits = model(tokens)
+        assert logits.shape == (batch, seq_len, vocab_size)
+        assert torch.isfinite(logits).all()
+```
+
+### Category 4: Principle-Based Algorithm Tests
+
+Algorithms prove their invariants hold. These tests validate the underlying logic, not just that code runs:
+
+```python
+def test_kv_cache_append_produces_correct_sequence():
+    # Store two disjoint segments, fetch should return concatenated tensor
+    cache.store(0, segment_a, ..., seq_pos=0)
+    cache.store(0, segment_b, ..., seq_pos=len(segment_a))
+    k, v = cache.fetch(0)
+    assert k.shape[-2] == len(segment_a) + len(segment_b)
+```
+
+### Test Infrastructure
+
+```
+snapmind/tests/
+├── conftest.py       # Shared fixtures: tiny_config, tiny_gpt2, test_tokens
+├── test_registry.py  # Unit tests
+├── test_config.py    # Unit tests
+├── layers/           # One test file per ABC + per implementation
+├── models/           # Conformance tests per architecture
+├── kv_cache/         # Principle-based algorithm tests
+├── tokenizer/        # Round-trip and known-output tests
+├── sampling/         # Invariant tests (probability, threshold)
+├── loaders/          # Round-trip tests
+└── engine/           # Integration tests (full pipeline)
+```
+
+### Running Tests
+
+```bash
+pytest snapmind/tests/ -v           # All tests
+pytest snapmind/tests/ -v -k "gpt2"  # Only GPT-2 related tests
+pytest snapmind/tests/layers/ -v     # Only layer tests
+```
+
+With `hypothesis` for property-based fuzzing:
+```python
+from hypothesis import given, strategies as st
+
+@given(st.tensors(...))
+def test_layernorm_is_isometric(tensor):
+    out = layer_norm(tensor)
+    # LayerNorm should preserve relative distances
+    assert torch.allclose(
+        (out[0] - out[1]).norm(),
+        (tensor[0] - tensor[1]).norm() / tensor.std(),
+        atol=1e-4
+    )
+```
+
 ## Dependencies
 
 Core (required):
@@ -315,3 +414,8 @@ Optional:
 - `safetensors` (weight loading)
 - `fastapi` + `uvicorn` (serving)
 - `prometheus-client` (metrics)
+
+Test:
+- `pytest` >= 8.0
+- `pytest-cov` >= 5.0
+- `hypothesis` >= 6.0 (property-based testing)

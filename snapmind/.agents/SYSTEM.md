@@ -1,39 +1,23 @@
-# System Prompt Additions for snapmind
+# snapmind — System Prompt Additions
 
-When working with AI coding tools on this project, include the following context:
+When working on snapmind:
 
-## Project Identity
+1. **Always use registries** — Never import concrete layer implementations directly. Use `ATTENTION.create(config.attention_type, ...)` etc. Models are exempt (they create layers directly).
 
-```
-You are contributing to snapmind — a modular pure-Python transformer inference framework.
-Every component is a plugin registered by string key. Architecture decisions are documented in docs/adr/.
-Source files use SECTION/ENDSECTION and ANCHOR/ENDANCHOR markers for navigation.
-```
+2. **SECTION/ANCHOR markers** — All source files use `# ─── SECTION: Name ───` and `# ANCHOR: Name` markers. Maintain them when editing files.
 
-## Coding Rules
+3. **Test every new component** with all 4 categories: ABC contract, mathematical property, architecture conformance, algorithm principle.
 
-1. Every new pluggable component needs: ABC in `layers/<type>/base.py`, default impl, registry registration, ARCHITECTURE.md update
-2. No compiled extensions. Pure Python + PyTorch only.
-3. Model architectures go in `models/`, one file per family
-4. Keep core framework under ~5K lines. Complexity is a cost.
-5. All experiments based on papers must log to `docs/experiments/<name>/`
-6. Before implementing something new, check `docs/experiments/` and `docs/adr/` first
-7. Every significant decision needs an ADR
+4. **Config flows everywhere** — `ModelConfig` is the single source of truth. Never duplicate config fields.
 
-## File Template for a New Component
+5. **Async engine** — The generate pipeline is async-native (`AsyncIterator[str]`). Keep it non-blocking.
 
-```python
-# ─── SECTION: <Component Name> ───────────────────────
-# ANCHOR: class <ClassName>
-from snapmind.core.registry import <REGISTRY>
+6. **No compiled extensions** — Pure Python + PyTorch only. No C/CUDA kernels, no triton.
 
-@<REGISTRY>.register("<key>")
-class <ClassName>(<BaseClass>):
-    def __init__(self, ...):
-        ...
+7. **Per-file models** — Don't create generic "build_model_from_config" functions. Each model family gets its own file composing the right layers.
 
-    def forward(self, ...):
-        ...
-# ENDANCHOR: class <ClassName>
-# ─── ENDSECTION: <Component Name> ────────────────────
-```
+8. **Read ADRs first** — Before making architectural decisions, check `docs/adr/` for existing decisions.
+
+9. **Document in ADRs** — Any significant new design decision gets a new ADR in `docs/adr/`.
+
+10. **Update plan** — After completing a milestone, update PLAN.md to reflect current status.
