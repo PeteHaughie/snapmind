@@ -105,6 +105,11 @@ def _remap_llama(state_dict: dict, model: nn.Module, config: ModelConfig) -> dic
     return new_state
 
 
+@register_hf_model("mistral", "mistralai/Mistral-7B-v0.1")
+def _remap_mistral(state_dict: dict, model: nn.Module, config: ModelConfig) -> dict:
+    return _remap_llama(state_dict, model, config)
+
+
 # ANCHOR: SafetensorsLoader
 @LOADER.register("safetensors")
 class SafetensorsLoader(WeightLoaderABC):

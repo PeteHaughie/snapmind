@@ -21,6 +21,7 @@ class ModelConfig:
     kv_cache_type: str = "naive"
     dropout: float = 0.0
     rope_theta: float = 10000.0
+    window_size: int = 4096
 
     def __post_init__(self):
         if self.d_ff is None:

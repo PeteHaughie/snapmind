@@ -30,6 +30,18 @@ KNOWN_MODELS: dict[str, dict[str, Any]] = {
         "vocab_size": 32000,
         "max_seq_len": 8192,
     },
+    "mistral": {
+        "d_model": 4096,
+        "n_heads": 32,
+        "n_kv_heads": 8,
+        "n_layers": 32,
+        "vocab_size": 32000,
+        "max_seq_len": 8192,
+        "d_ff": 14336,
+        "norm_eps": 1e-05,
+        "rope_theta": 10000.0,
+        "window_size": 4096,
+    },
 }
 
 
@@ -58,6 +70,10 @@ def build_model(model_name: str) -> tuple[nn.Module, ModelConfig]:
         from snapmind.models.gpt2 import GPT2Model
 
         model: nn.Module = GPT2Model(cfg)
+    elif model_name == "mistral":
+        from snapmind.models.mistral import MistralModel
+
+        model = MistralModel(cfg)
     else:
         from snapmind.models.llama import LlamaModel
 
