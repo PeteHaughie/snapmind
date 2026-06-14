@@ -5,6 +5,7 @@ from pathlib import Path
 
 KNOWN_MODELS = {
     "gpt2": {"d_model": 768, "n_heads": 12, "n_layers": 12, "vocab_size": 50257, "max_seq_len": 1024},
+    "tinyllama": {"d_model": 2048, "n_heads": 32, "n_kv_heads": 4, "n_layers": 22, "vocab_size": 32000, "max_seq_len": 2048, "d_ff": 5632, "norm_eps": 1e-05, "rope_theta": 10000.0},
     "llama": {"d_model": 4096, "n_heads": 32, "n_kv_heads": 8, "n_layers": 32, "vocab_size": 32000, "max_seq_len": 8192},
 }
 
@@ -19,18 +20,21 @@ def build_model(model_name: str):
         sys.exit(1)
 
     cfg = ModelConfig(
-        model_type=model_name,
+        model_type="gpt2" if model_name == "gpt2" else model_name,
         d_model=spec["d_model"],
         n_heads=spec["n_heads"],
         n_kv_heads=spec.get("n_kv_heads", spec["n_heads"]),
         n_layers=spec["n_layers"],
         vocab_size=spec["vocab_size"],
         max_seq_len=spec["max_seq_len"],
+        norm_eps=spec.get("norm_eps", 1e-5),
+        d_ff=spec.get("d_ff", spec["d_model"] * 4),
+        rope_theta=spec.get("rope_theta", 10000.0),
     )
     if model_name == "gpt2":
         from snapmind.models.gpt2 import GPT2Model
         model = GPT2Model(cfg)
-    elif model_name == "llama":
+    else:
         from snapmind.models.llama import LlamaModel
         model = LlamaModel(cfg)
 
@@ -59,7 +63,7 @@ def cmd_generate(args: argparse.Namespace):
     from snapmind.engine.generate import GenerateEngine
 
     model, _ = build_model(args.model)
-    tok = HFTokenizer()
+    tok = HFTokenizer(model_name=args.model)
     sampler = GreedySampler()
     engine = GenerateEngine(model, tok, sampler)
 

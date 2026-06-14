@@ -27,7 +27,7 @@ class GPT2Model(BaseModelABC):
 
     def forward(self, tokens, kv_cache=None, position_ids=None):
         x = self.embed(tokens)
-        x = self.pe(x)
+        x = self.pe(x, position_ids=position_ids)
         for i, layer in enumerate(self.layers):
             layer_kv = kv_cache[i] if kv_cache is not None else None
             x = layer(x, kv_cache=layer_kv, position_ids=position_ids)

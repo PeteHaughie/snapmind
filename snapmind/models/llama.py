@@ -34,7 +34,7 @@ class LlamaTransformerBlock(nn.Module):
         is_prefill = kv_cache is None or kv_cache.get("k") is None
         from snapmind.layers.attention.sdpa import create_causal_mask
         mask = create_causal_mask(x.shape[1], x.device) if is_prefill else None
-        attn_out, _ = self.self_attn(self.input_layernorm(x), kv_cache=kv_cache, mask=mask)
+        attn_out, _ = self.self_attn(self.input_layernorm(x), kv_cache=kv_cache, mask=mask, position_ids=position_ids)
         x = x + attn_out
         ffn_out = self.mlp(self.post_attention_layernorm(x))
         x = x + ffn_out

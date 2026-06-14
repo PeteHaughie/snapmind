@@ -31,7 +31,7 @@ class ChatRequest(BaseModel):
 # ANCHOR: create_app
 def create_app(model, config, model_name: str):
     app = FastAPI(title="snapmind", version="0.1.0")
-    tok = HFTokenizer()
+    tok = HFTokenizer(model_name=model_name)
 
     @app.get("/v1/models")
     async def list_models():

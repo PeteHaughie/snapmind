@@ -38,6 +38,7 @@ class GenerateEngine:
         if isinstance(next_token_id, torch.Tensor):
             next_token_id = next_token_id.item()
 
+        step = len(input_ids)
         for _ in range(max_tokens):
             if next_token_id == self._eos_token_id:
                 break
@@ -45,7 +46,10 @@ class GenerateEngine:
             yield token_str
             next_token_id = decode_step(
                 self.model, next_token_id, kv_cache,
-                self.sampler, temperature=temperature, **sampler_kwargs,
+                self.sampler, temperature=temperature,
+                position_ids=torch.tensor([step]),
+                **sampler_kwargs,
             )
+            step += 1
 # ENDANCHOR: GenerateEngine
 # ─── ENDSECTION: Generate Engine ────────────────────────

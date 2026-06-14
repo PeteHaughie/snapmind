@@ -8,6 +8,7 @@ dependencies = [
     "huggingface_hub>=0.20",
     "safetensors>=0.4",
     "tiktoken>=0.5",
+    "tokenizers>=0.15",
 ]
 
 [project.scripts]
