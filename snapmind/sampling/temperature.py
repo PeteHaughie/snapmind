@@ -13,7 +13,7 @@ class TemperatureSampler(SamplerABC):
 
         self._wrapped = _S.create(wrapped)
 
-    def sample(self, logits: torch.Tensor, temperature: float = 1.0, **kwargs) -> int | torch.Tensor:
+    def sample(self, logits: torch.Tensor, temperature: float = 1.0, **kwargs) -> torch.Tensor:
         if temperature == 0.0 or temperature < 1e-8:
             return logits.argmax(dim=-1)
         scaled = logits / temperature

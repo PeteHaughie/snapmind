@@ -4,7 +4,6 @@ import torch.nn as nn
 
 from snapmind.core.architecture import ARCHITECTURE, SupportedArchitecture
 from snapmind.core.config import ModelConfig
-from snapmind.core.registry import MODEL
 from snapmind.layers.attention.gqa import GroupedQueryAttention
 from snapmind.layers.gated_feed_forward import GatedFeedForward
 from snapmind.layers.normalization.rms_norm import RMSNorm
@@ -68,7 +67,6 @@ class MistralTransformerBlock(nn.Module):
 
 
 # ANCHOR: MistralModel
-@MODEL.register("mistral")
 class MistralModel(BaseModelABC):
     def __init__(self, config: ModelConfig):
         super().__init__(config)

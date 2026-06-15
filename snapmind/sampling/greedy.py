@@ -8,7 +8,7 @@ from snapmind.sampling.base import SamplerABC
 # ANCHOR: GreedySampler
 @SAMPLER.register("greedy")
 class GreedySampler(SamplerABC):
-    def sample(self, logits: torch.Tensor, temperature: float = 1.0, **kwargs) -> int | torch.Tensor:
+    def sample(self, logits: torch.Tensor, temperature: float = 1.0, **kwargs) -> torch.Tensor:
         return logits.argmax(dim=-1)
 
 

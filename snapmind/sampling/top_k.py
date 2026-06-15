@@ -11,7 +11,7 @@ from snapmind.sampling.base import SamplerABC
 class TopKSampler(SamplerABC):
     def sample(
         self, logits: torch.Tensor, temperature: float = 1.0, top_k: int = 50, **kwargs
-    ) -> int | torch.Tensor:
+    ) -> torch.Tensor:
         if temperature == 0.0 or temperature < 1e-8:
             return logits.argmax(dim=-1)
 

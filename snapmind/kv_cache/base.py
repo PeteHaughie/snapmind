@@ -1,5 +1,6 @@
 # ─── SECTION: KV Cache ABC ──────────────────────────────
 import abc
+from typing import Any
 
 import torch
 
@@ -9,7 +10,8 @@ class KVCacheABC(abc.ABC):
     """Base class for KV cache strategies (naive, sliding window, paged, …).
 
     Subclasses manage per-layer key/value storage and expose standard lifecycle
-    operations: :meth:`store`, :meth:`fetch`, :meth:`evict`, :meth:`reset`.
+    operations: :meth:`store`, :meth:`fetch`, :meth:`evict`, :meth:`reset`,
+    and :meth:`layer_dicts`.
     """
 
     @abc.abstractmethod
@@ -31,6 +33,14 @@ class KVCacheABC(abc.ABC):
     @abc.abstractmethod
     def memory_usage(self) -> dict:
         """Return a dict with memory/block statistics (keys vary by strategy)."""
+
+    @abc.abstractmethod
+    def layer_dicts(self) -> dict[int, dict[str, Any]]:
+        """Return the per-layer ``{layer_idx: {"k": tensor, "v": tensor}}`` dict.
+
+        The returned dicts are live references — mutations by attention layers
+        (in-place tensor updates) propagate back to the cache.
+        """
 
 
 # ENDANCHOR: KVCacheABC

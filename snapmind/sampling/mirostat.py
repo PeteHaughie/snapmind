@@ -21,7 +21,7 @@ class MirostatSampler(SamplerABC):
 
     def sample(
         self, logits: torch.Tensor, temperature: float = 1.0, **kwargs
-    ) -> int | torch.Tensor:
+    ) -> torch.Tensor:
         if temperature == 0.0 or temperature < 1e-8:
             return logits.argmax(dim=-1)
 

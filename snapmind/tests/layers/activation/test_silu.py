@@ -20,10 +20,11 @@ class TestSiLUABC:
         t = torch.randn(2, 4)
         assert m(t).shape == (2, 4)
 
-    def test_registered_in_activation_registry(self):
-        from snapmind.core.registry import ACTIVATION
+    def test_silu_subclass_of_activation_abc(self):
+        from snapmind.layers.activation.base import ActivationABC
+        from snapmind.layers.activation.silu import SiLU
 
-        assert "silu" in ACTIVATION
+        assert issubclass(SiLU, ActivationABC)
 
 
 class TestSiLU:

@@ -17,7 +17,7 @@ class SamplerABC(abc.ABC):
         logits: torch.Tensor,
         temperature: float = 1.0,
         **kwargs,
-    ) -> int | torch.Tensor:
+    ) -> torch.Tensor:
         """Select a token index given raw logits.
 
         Args:
@@ -26,7 +26,7 @@ class SamplerABC(abc.ABC):
             **kwargs: Strategy-specific parameters (``top_k``, ``top_p``, etc.).
 
         Returns:
-            Selected token index (int or batched tensor).
+            Selected token index tensor (0-d for single, 1-d for batched).
         """
 
 

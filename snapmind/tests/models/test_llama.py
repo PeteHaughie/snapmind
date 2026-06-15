@@ -47,10 +47,11 @@ class TestLlamaModel:
 
         assert isinstance(tiny_llama.pe, RotaryPositionalEncoding)
 
-    def test_registered_in_model_registry(self):
-        from snapmind.core.registry import MODEL
+    def test_registered_in_architecture_registry(self):
+        from snapmind.core.architecture import ARCHITECTURE
 
-        assert "llama" in MODEL
+        assert "llama" in ARCHITECTURE
+        assert "tinyllama" in ARCHITECTURE
 
     def test_forward_with_kv_cache(self, tiny_llama):
         cfg = tiny_llama.config

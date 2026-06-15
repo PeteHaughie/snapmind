@@ -4,7 +4,6 @@ import torch.nn as nn
 
 from snapmind.core.architecture import ARCHITECTURE, SupportedArchitecture
 from snapmind.core.config import ModelConfig
-from snapmind.core.registry import MODEL
 from snapmind.layers.attention.gqa import GroupedQueryAttention
 from snapmind.layers.gated_feed_forward import GatedFeedForward
 from snapmind.layers.normalization.rms_norm import RMSNorm
@@ -52,7 +51,6 @@ class LlamaTransformerBlock(nn.Module):
 
 
 # ANCHOR: LlamaModel
-@MODEL.register("llama")
 class LlamaModel(BaseModelABC):
     def __init__(self, config: ModelConfig):
         super().__init__(config)

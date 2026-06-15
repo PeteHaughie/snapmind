@@ -27,10 +27,14 @@ class TestKVCacheABC:
             def memory_usage(self):
                 return {}
 
+            def layer_dicts(self):
+                return {}
+
         cache = MinimalCache()
         cache.store(0, None, None, 0)
         k, v = cache.fetch(0)
         assert k is None and v is None
+        assert cache.layer_dicts() == {}
 
     def test_registered_via_KV_CACHE(self):
         from snapmind.core.registry import KV_CACHE

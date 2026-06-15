@@ -50,7 +50,7 @@ def load_weights(model: nn.Module, model_name: str) -> None:
             missing_str = ", ".join(list(result["missing"])[:5])
             print(f"  Warning: {len(result['missing'])} missing keys: {missing_str}...", file=sys.stderr)
     except Exception as e:
-        print(f"  Warning: weight loading failed ({e}). Using random weights.", file=sys.stderr)
+        print(f"  Warning: weight loading failed ({type(e).__name__}: {e}). Using random weights.", file=sys.stderr)
 
 
 # ENDANCHOR: load_weights

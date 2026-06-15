@@ -21,7 +21,10 @@ class TestActivationABC:
         result = instance(x)
         assert result.shape == (2, 16, 32)
 
-    def test_registered_via_ACTIVATION(self):
-        from snapmind.core.registry import ACTIVATION
+    def test_activations_exist(self):
+        from snapmind.layers.activation.base import ActivationABC
+        from snapmind.layers.activation.gelu import GELU
+        from snapmind.layers.activation.silu import SiLU
 
-        assert "gelu" in ACTIVATION
+        assert issubclass(GELU, ActivationABC)
+        assert issubclass(SiLU, ActivationABC)

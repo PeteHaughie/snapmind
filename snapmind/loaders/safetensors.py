@@ -9,7 +9,7 @@ from safetensors.torch import load_file
 
 from snapmind.core.architecture import ARCHITECTURE
 from snapmind.core.config import ModelConfig
-from snapmind.core.registry import LOADER
+from snapmind.core.registry import LOADER, RegistryError
 from snapmind.loaders.base import WeightLoaderABC
 
 
@@ -170,7 +170,7 @@ class SafetensorsLoader(WeightLoaderABC):
 
         remap_fn = _REMAP_FN.get(config.model_type)
         if remap_fn is None:
-            raise ValueError(f"No weight remap function for '{config.model_type}'")
+            raise RegistryError(f"unknown model_type '{config.model_type}' — no weight remap function")
 
         repo_id: str = arch.hf_repo
         filename: str = arch.hf_filename

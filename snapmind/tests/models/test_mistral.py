@@ -109,10 +109,11 @@ class TestMistralKVCacheIntegration:
 
 
 class TestMistralContract:
-    def test_has_model_registry(self):
-        from snapmind.core.registry import MODEL
+    def test_has_architecture_registry(self):
+        from snapmind.core.architecture import ARCHITECTURE
 
-        assert "mistral" in MODEL
+        assert "mistral" in ARCHITECTURE
+        assert "ministral-3-3b" in ARCHITECTURE
 
 
 # ─── ENDSECTION: Mistral Model Tests ──────────────────────

@@ -134,6 +134,16 @@ class PagedKVCache(KVCacheABC):
             "max_blocks": self.max_blocks,
         }
 
+    def layer_dicts(self) -> dict[int, dict[str, torch.Tensor | None]]:
+        result: dict[int, dict[str, torch.Tensor | None]] = {}
+        for i in range(self.n_layers):
+            k, v = self.fetch(i)
+            if k.numel() == 0:
+                result[i] = {"k": None, "v": None}
+            else:
+                result[i] = {"k": k, "v": v}
+        return result
+
 
 # ENDANCHOR: PagedKVCache
 # ─── ENDSECTION: Paged KV Cache ──────────────────────────
