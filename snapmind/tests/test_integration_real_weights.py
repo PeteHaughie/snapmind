@@ -84,4 +84,34 @@ class TestRealTinyLlama:
         assert not torch.allclose(logits[:, 0, :], logits[:, -1, :], atol=1e-2)
 
 
+@pytest.fixture(scope="module")
+def _ministral3_build():
+    from snapmind.serving.cli import build_model
+    from snapmind.tokenizer.hf import HFTokenizer
+
+    m, cfg = build_model("ministral-3-3b", device="cpu")
+    tok = HFTokenizer(model_name="ministral-3-3b")
+    return m, cfg, tok
+
+
+@pytest.mark.slow
+class TestRealMinistral3:
+    """Downloads real Ministral 3 3B weights via ARCHITECTURE registry."""
+
+    def test_loader_reports_no_missing(self, _ministral3_build):
+        m, _, _ = _ministral3_build
+        state = m.state_dict()
+        assert "embed.weight" in state
+        assert "norm.weight" in state
+
+    def test_forward_pass(self, _ministral3_build):
+        m, cfg, tok = _ministral3_build
+        ids = tok.encode("What is attention?")
+        tokens = torch.tensor([ids])
+        with torch.no_grad():
+            logits = m(tokens)
+        assert logits.shape == (1, len(ids), cfg.vocab_size)
+        assert torch.isfinite(logits).all()
+
+
 # ─── ENDSECTION: Real-Weight Integration Tests ─────────
