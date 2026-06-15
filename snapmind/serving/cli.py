@@ -53,10 +53,14 @@ def load_weights(model: nn.Module, model_name: str) -> None:
         print(f"  Warning: weight loading failed ({e}). Using random weights.", file=sys.stderr)
 
 
+# ENDANCHOR: load_weights
+
+
 # ANCHOR: cmd_generate
 def cmd_generate(args: argparse.Namespace):
     import asyncio
 
+    from snapmind.core.config import SamplingConfig
     from snapmind.engine.generate import GenerateEngine
     from snapmind.sampling.greedy import GreedySampler
     from snapmind.tokenizer.hf import HFTokenizer
@@ -64,11 +68,23 @@ def cmd_generate(args: argparse.Namespace):
     model, _ = build_model(args.model, device=args.device)
     tok = HFTokenizer(model_name=args.model)
     sampler = GreedySampler()
+    samp_cfg = SamplingConfig(
+        temperature=args.temperature,
+        max_tokens=args.max_tokens,
+        top_k=args.top_k,
+        top_p=args.top_p,
+    )
     engine = GenerateEngine(model, tok, sampler)
 
     async def run():
         tokens = []
-        async for token in engine.generate(args.prompt, max_tokens=args.max_tokens):
+        async for token in engine.generate(
+            args.prompt,
+            max_tokens=samp_cfg.max_tokens,
+            temperature=samp_cfg.temperature,
+            top_k=samp_cfg.top_k,
+            top_p=samp_cfg.top_p,
+        ):
             tokens.append(token)
         return "".join(tokens)
 
@@ -128,6 +144,9 @@ def main() -> None:
     p_gen.add_argument("--device", default="auto", help="Device: auto, cpu, mps, cuda")
     p_gen.add_argument("--prompt", default="Hello")
     p_gen.add_argument("--max-tokens", type=int, default=50)
+    p_gen.add_argument("--temperature", type=float, default=1.0, help="Sampling temperature")
+    p_gen.add_argument("--top-k", type=int, default=None, help="Top-k sampling")
+    p_gen.add_argument("--top-p", type=float, default=None, help="Top-p (nucleus) sampling")
     p_gen.set_defaults(func=cmd_generate)
 
     p_list = sub.add_parser("list", help="List known model architectures")

@@ -38,6 +38,19 @@ class ChatRequest(BaseModel):
     mirostat_tau: float | None = None
     mirostat_learning_rate: float | None = None
 
+    @property
+    def sampling_config(self):
+        from snapmind.core.config import SamplingConfig
+
+        return SamplingConfig(
+            temperature=self.temperature,
+            max_tokens=self.max_tokens,
+            top_k=self.top_k,
+            top_p=self.top_p,
+            mirostat_tau=self.mirostat_tau,
+            mirostat_learning_rate=self.mirostat_learning_rate,
+        )
+
 
 def resolve_sampler(req: ChatRequest) -> tuple:
     sampler_kwargs: dict = {}

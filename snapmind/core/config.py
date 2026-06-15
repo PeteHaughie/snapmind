@@ -60,6 +60,22 @@ class KVCacheConfig:
 # ENDANCHOR: KVCacheConfig
 
 
+# ANCHOR: SamplingConfig
+@dataclass
+class SamplingConfig:
+    """Configuration for token sampling and generation length."""
+
+    temperature: float = 1.0
+    max_tokens: int = 100
+    top_k: int | None = None
+    top_p: float | None = None
+    mirostat_tau: float | None = None
+    mirostat_learning_rate: float | None = None
+
+
+# ENDANCHOR: SamplingConfig
+
+
 # ANCHOR: EngineConfig
 @dataclass
 class EngineConfig:
@@ -68,6 +84,7 @@ class EngineConfig:
     max_batch_tokens: int = 4096
     device: str = "auto"
     dtype: str = "bfloat16"
+    max_tokens: int = 100
 
 
 # ENDANCHOR: EngineConfig

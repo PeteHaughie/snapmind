@@ -5,10 +5,13 @@ from dataclasses import dataclass
 
 from snapmind.core.registry import Registry
 
+# ANCHOR: ARCHITECTURE
 ARCHITECTURE: Registry = Registry("architecture", expected_type=object)
 """Registry for :class:`SupportedArchitecture` records, keyed by model name."""
+# ENDANCHOR: ARCHITECTURE
 
 
+# ANCHOR: SupportedArchitecture
 @dataclass
 class SupportedArchitecture:
     """Declarative record for a supported model architecture.
@@ -46,4 +49,5 @@ class SupportedArchitecture:
     """
 
 
+# ENDANCHOR: SupportedArchitecture
 # ─── ENDSECTION: Architecture Registry ──────────────────

@@ -5,6 +5,7 @@ from typing import Any
 import torch
 import torch.nn as nn
 
+from snapmind.core.config import EngineConfig
 from snapmind.engine.decode import decode_step
 from snapmind.engine.prefill import prefill
 from snapmind.sampling.base import SamplerABC
@@ -19,11 +20,13 @@ class GenerateEngine:
         tokenizer: TokenizerABC,
         sampler: SamplerABC,
         eos_token_id: int | None = None,
+        engine_config: EngineConfig | None = None,
     ):
         self.model = model
         self.tokenizer = tokenizer
         self.sampler = sampler
         self._eos_token_id = eos_token_id if eos_token_id is not None else getattr(tokenizer, "eos_token_id", 50256)
+        self._engine_config = engine_config or EngineConfig()
 
     def _make_kv_cache(self) -> dict:
         cfg: Any = self.model.config
@@ -32,10 +35,12 @@ class GenerateEngine:
     async def generate(
         self,
         prompt: str,
-        max_tokens: int = 100,
+        max_tokens: int | None = None,
         temperature: float = 1.0,
         **sampler_kwargs,
     ) -> AsyncIterator[str]:
+        if max_tokens is None:
+            max_tokens = self._engine_config.max_tokens
         kv_cache = self._make_kv_cache()
         input_ids = self.tokenizer.encode(prompt)
         device = next(self.model.parameters()).device

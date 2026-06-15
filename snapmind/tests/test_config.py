@@ -84,6 +84,33 @@ class TestKVCacheConfig:
         assert config.dtype == "bfloat16"
 
 
+class TestSamplingConfig:
+    def test_default_values(self):
+        from snapmind.core.config import SamplingConfig
+
+        config = SamplingConfig()
+        assert config.temperature == 1.0
+        assert config.max_tokens == 100
+        assert config.top_k is None
+        assert config.top_p is None
+
+    def test_custom_values(self):
+        from snapmind.core.config import SamplingConfig
+
+        config = SamplingConfig(temperature=0.8, max_tokens=200, top_k=50, top_p=0.9)
+        assert config.temperature == 0.8
+        assert config.max_tokens == 200
+        assert config.top_k == 50
+        assert config.top_p == 0.9
+
+    def test_mirostat_params(self):
+        from snapmind.core.config import SamplingConfig
+
+        config = SamplingConfig(mirostat_tau=3.0, mirostat_learning_rate=0.2)
+        assert config.mirostat_tau == 3.0
+        assert config.mirostat_learning_rate == 0.2
+
+
 class TestEngineConfig:
     def test_default_values(self):
         from snapmind.core.config import EngineConfig
@@ -91,3 +118,4 @@ class TestEngineConfig:
         config = EngineConfig()
         assert config.max_batch_tokens == 4096
         assert config.device == "auto"
+        assert config.max_tokens == 100
