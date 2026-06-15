@@ -10,7 +10,7 @@ snapmind is the opposite: **everything is a plugin**. Want to test a sentence-le
 
 ## Status
 
-Active development — Phase 4 of 4 (serving + polish). 4 model families, 321 tests, clean lint.
+Phase 4 complete (serving + polish). 4 model families, 378 tests (including 49 property-based), clean lint + type check.
 
 ## Features
 
@@ -22,6 +22,8 @@ Active development — Phase 4 of 4 (serving + polish). 4 model families, 321 te
 - **MPS/GPU support** — auto-detects Metal, CUDA, or falls back to CPU; bf16 conversion for memory-constrained devices.
 - **Paged KV cache** — block-based allocation with eviction, pure Python reimplementation of PagedAttention.
 - **MLA attention** — DeepSeek-style MultiHeadLatentAttention with compressed KV cache.
+- **Property-based tests** — 49 hypothesis tests fuzzing samplers, config, registry, attention masks, and KV cache invariants.
+- **Benchmark corpus** — standardised prompt corpus and runner for KV cache performance measurement (TTFT, decode throughput, memory).
 
 ## Quick Start
 
@@ -93,6 +95,7 @@ snapmind is designed for AI-assisted engineering. The codebase uses structured m
 - **ANCHOR/ENDANCHOR markers** — key decision points (class defs, plugin hooks) are explicitly tagged
 - **`docs/adr/`** — Architecture Decision Records prevent contradictory decisions across sessions
 - **`docs/experiments/`** — Every paper-based implementation logged with status, results, and rejection reason
+- **`docs/benchmarks/`** — Standardised prompt corpus, runner, and per-model results for KV cache performance measurement
 - **`.agents/`** — Tool-specific instructions for AI coding agents
 - **`MEMORY.md`** — Persistent session context so agents don't lose focus between invocations
 
@@ -112,7 +115,8 @@ snapmind/
 ├── serving/       # CLI and HTTP server
 ├── docs/
 │   ├── adr/       # Architecture Decision Records
-│   └── experiments/  # One folder per tested paper/idea
+│   ├── experiments/  # One folder per tested paper/idea
+│   └── benchmarks/   # Corpus, runner, and results for KV cache measurement
 └── MEMORY.md      # Session-persistent agent context
 ```
 
