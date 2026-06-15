@@ -34,6 +34,11 @@ snapmind/
 └── .agents/        # Framework-specific agent config
 ```
 
+## Post-Cycle Requirements
+
+After each development cycle, before wrapping up:
+- **Update the README** at `/README.md` to reflect the current state: bump status if applicable, add new features, update quick-start examples to match current APIs, and verify all references are accurate.
+
 ## Testing
 
 ```bash

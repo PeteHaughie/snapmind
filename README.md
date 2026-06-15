@@ -10,27 +10,52 @@ snapmind is the opposite: **everything is a plugin**. Want to test a sentence-le
 
 ## Status
 
-Early development — Phase 1 of 4. Not yet ready for production use.
+Active development — Phase 4 of 4 (serving + polish). 4 model families, 313 tests, clean lint.
 
 ## Features
 
 - **Pure Python** — no compiled extensions required. PyTorch-powered.
-- **Pluggable everything** — attention, KV cache, positional encoding, normalization, activation, sampler, tokenizer. All via string-key registries.
+- **Pluggable everything** — attention (SDPA, GQA, MLA), KV cache (naive, sliding window, paged), positional encoding (learned, RoPE, none), normalization (LayerNorm, RMSNorm), activation (GELU, SiLU), sampler (greedy, temperature, top-p, top-k, mirostat), tokenizer (HF). All via string-key registries.
 - **Per-file model architectures** — one file per model family (`llama.py`, `gpt2.py`, `mistral.py`).
 - **Real model weights** — load from safetensors and PyTorch state dicts.
 - **Async-native API** — streaming generation out of the box.
+- **MPS/GPU support** — auto-detects Metal, CUDA, or falls back to CPU; bf16 conversion for memory-constrained devices.
+- **Paged KV cache** — block-based allocation with eviction, pure Python reimplementation of PagedAttention.
+- **MLA attention** — DeepSeek-style MultiHeadLatentAttention with compressed KV cache.
 
 ## Quick Start
 
+```bash
+# Generate text from a prompt using any known model
+uv run python -m snapmind.serving.cli generate --model mistral --prompt "What is attention?" --max-tokens 50
+
+# Start an OpenAI-compatible API server
+uv run python -m snapmind.serving.cli serve --model llama --port 8000
+
+# List available models
+uv run python -m snapmind.serving.cli list
+```
+
+Or in Python:
+
 ```python
-from snapmind import load_model, generate
+import asyncio
+from snapmind.models.llama import LlamaModel
 from snapmind.core.config import ModelConfig
+from snapmind.engine.generate import GenerateEngine
+from snapmind.sampling.greedy import GreedySampler
+from snapmind.tokenizer.hf import HFTokenizer
 
-config = ModelConfig(model_type="llama", kv_cache_type="naive")
-model = load_model(config, weights="path/to/model.safetensors")
+config = ModelConfig(model_type="llama", d_model=2048, n_heads=32, n_kv_heads=4, n_layers=22)
+model = LlamaModel(config)
+tok = HFTokenizer(model_name="tinyllama")
+engine = GenerateEngine(model, tok, GreedySampler())
 
-for token in generate(model, tokenizer, "What is attention?"):
-    print(token, end="", flush=True)
+async def run():
+    async for token in engine.generate("What is attention?", max_tokens=50):
+        print(token, end="", flush=True)
+
+asyncio.run(run())
 ```
 
 ## Adding a Custom Component
@@ -56,6 +81,7 @@ snapmind's architecture draws from several projects:
 - **HuggingFace Transformers** — per-file model definitions and the `register_model` pattern. snapmind adopts the same approach of one file per architecture family.
 - **Karpathy's llama2.py / nanoGPT** — the philosophy that understanding inference shouldn't require navigating a 200K-line codebase. snapmind aims to keep its core ~5K lines.
 - **vLLM PagedAttention** — snapmind's `PagedKVCache` is an independent reimplementation of the same idea, but as a swappable plugin rather than a hard-coded kernel.
+- **Modular (MAX + Mojo)** — the [Modular Platform](https://github.com/modular/modular) demonstrated three patterns that influenced snapmind's evolution: (1) a `SupportedArchitecture` dataclass pattern that separates architecture metadata from model implementation, keeping registration concerns cleanly decoupled; (2) a composite config model that auto-routes CLI flags to sub-configs (sampling, runtime, profiling); and (3) per-architecture weight format adapters for loading from multiple checkpoint formats.
 - **Comment Anchors (VSCode)** — SECTION/ANCHOR markers for AI-navigable source code, inspired by VSCode comment anchor extensions.
 - **CLAUDE.md / MADR** — Memory files, agent configuration, and Architecture Decision Records for persistent agent context and structured decision logging.
 

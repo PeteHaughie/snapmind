@@ -238,6 +238,16 @@ Karpathy's implementations demonstrate that transformer inference is fundamental
 
 vLLM's PagedAttention is the standard for KV cache memory management, but it's compiled into C++/CUDA kernels. snapmind's `PagedKVCache` reimplements the same idea in pure Python as a swappable plugin — demonstrating that even "kernel-level" optimizations can be pluggable components.
 
+### Modular (MAX + Mojo) — Registry-Based Model Dispatch
+
+The [Modular Platform](https://github.com/modular/modular) is the world's largest open-source kernel repository (450K+ lines, 26K+ stars, 35K commits). Three patterns from their architecture inform snapmind's design path:
+
+1. **`SupportedArchitecture` dataclass pattern**: MAX uses a dataclass (not an ABC) to bundle architecture metadata — model class, config, tokenizer, weight adapters, supported encodings, memory planner. The registry holds metadata *about* the architecture separately from the model itself. This composition-over-inheritance approach is cleaner than a monolithic base class and is worth adopting for snapmind's model registry.
+
+2. **Composite config model**: A single `PipelineConfig` auto-routes kwargs to sub-configs (`sampling`, `runtime`, `profiling`, `lora`, `speculative`) via Pydantic validators. This simplifies the CLI surface — one YAML file configures everything — without scattering configuration across module boundaries.
+
+3. **Per-architecture weight format adapters**: Each architecture declares `weight_adapters: dict[WeightsFormat, WeightsAdapter]` enabling support for safetensors, GGUF, PyTorch, and custom formats without per-format conditional logic in model classes.
+
 ## AI-Friendly Design
 
 snapmind is built for an era where most engineering is performed by AI coding agents. Every convention exists to make the codebase navigable programmatically.
@@ -287,7 +297,10 @@ docs/adr/
 ├── 001-use-registry-pattern.md
 ├── 002-per-file-model-architectures.md
 ├── 003-pytorch-only-backend.md
-└── 004-ai-friendly-annotations.md
+├── 004-ai-friendly-annotations.md
+├── 005-engine-pipeline.md
+├── 006-llama-model-implementation.md
+└── 007-openai-api-server.md
 ```
 
 ADRs prevent agents from making contradictory decisions across sessions and provide a searchable rationale for every choice.
