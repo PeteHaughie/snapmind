@@ -7,13 +7,17 @@ from collections.abc import AsyncGenerator
 import torch.nn as nn
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
+import snapmind.sampling.greedy  # noqa: F401
+import snapmind.sampling.temperature  # noqa: F401
+import snapmind.sampling.top_k  # noqa: F401
+import snapmind.sampling.top_p  # noqa: F401
+import snapmind.tokenizer.hf  # noqa: F401
 from snapmind.core.config import ModelConfig
+from snapmind.core.registry import SAMPLER, TOKENIZER
 from snapmind.engine.generate import GenerateEngine
-from snapmind.sampling.greedy import GreedySampler
-from snapmind.sampling.top_p import TopPSampler
-from snapmind.tokenizer.hf import HFTokenizer
+from snapmind.sampling.mirostat import MirostatSampler
 
 
 class ChatMessage(BaseModel):
@@ -22,18 +26,45 @@ class ChatMessage(BaseModel):
 
 
 class ChatRequest(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
     model: str = "gpt2"
     messages: list[ChatMessage]
     stream: bool = False
     max_tokens: int = 100
     temperature: float = 0.7
     top_p: float | None = None
+    top_k: int | None = None
+    mirostat_tau: float | None = None
+    mirostat_learning_rate: float | None = None
+
+
+def resolve_sampler(req: ChatRequest) -> tuple:
+    sampler_kwargs: dict = {}
+
+    if req.mirostat_tau is not None:
+        tau = req.mirostat_tau
+        lr = req.mirostat_learning_rate if req.mirostat_learning_rate is not None else 0.1
+        return MirostatSampler(tau=tau, learning_rate=lr), sampler_kwargs
+
+    if req.top_k is not None:
+        sampler_kwargs["top_k"] = req.top_k
+        return SAMPLER.create("top_k"), sampler_kwargs
+
+    if req.top_p is not None:
+        sampler_kwargs["top_p"] = req.top_p
+        return SAMPLER.create("top_p"), sampler_kwargs
+
+    if req.temperature != 1.0:
+        return SAMPLER.create("temperature"), sampler_kwargs
+
+    return SAMPLER.create("greedy"), sampler_kwargs
 
 
 # ANCHOR: create_app
 def create_app(model: nn.Module, config: ModelConfig, model_name: str) -> FastAPI:
     app = FastAPI(title="snapmind", version="0.1.0")
-    tok = HFTokenizer(model_name=model_name)
+    tok = TOKENIZER.create("hf", model_name=model_name)
 
     @app.get("/v1/models")
     async def list_models():
@@ -48,13 +79,7 @@ def create_app(model: nn.Module, config: ModelConfig, model_name: str) -> FastAP
             raise HTTPException(400, "messages is required")
 
         prompt = req.messages[-1].content
-
-        sampler_cls = TopPSampler if req.top_p is not None else GreedySampler
-        sampler_kwargs = {}
-        if req.top_p is not None:
-            sampler_kwargs["top_p"] = req.top_p
-
-        sampler = sampler_cls()
+        sampler, sampler_kwargs = resolve_sampler(req)
         engine = GenerateEngine(model, tok, sampler)
 
         if req.stream:

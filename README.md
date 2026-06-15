@@ -10,7 +10,7 @@ snapmind is the opposite: **everything is a plugin**. Want to test a sentence-le
 
 ## Status
 
-Active development — Phase 4 of 4 (serving + polish). 4 model families, 313 tests, clean lint.
+Active development — Phase 4 of 4 (serving + polish). 4 model families, 321 tests, clean lint.
 
 ## Features
 
@@ -18,7 +18,7 @@ Active development — Phase 4 of 4 (serving + polish). 4 model families, 313 te
 - **Pluggable everything** — attention (SDPA, GQA, MLA), KV cache (naive, sliding window, paged), positional encoding (learned, RoPE, none), normalization (LayerNorm, RMSNorm), activation (GELU, SiLU), sampler (greedy, temperature, top-p, top-k, mirostat), tokenizer (HF). All via string-key registries.
 - **Per-file model architectures** — one file per model family (`llama.py`, `gpt2.py`, `mistral.py`).
 - **Real model weights** — load from safetensors and PyTorch state dicts.
-- **Async-native API** — streaming generation out of the box.
+- **Async-native API** — streaming generation out of the box. OpenAI-compatible server dispatches samplers via registry (ADR 007).
 - **MPS/GPU support** — auto-detects Metal, CUDA, or falls back to CPU; bf16 conversion for memory-constrained devices.
 - **Paged KV cache** — block-based allocation with eviction, pure Python reimplementation of PagedAttention.
 - **MLA attention** — DeepSeek-style MultiHeadLatentAttention with compressed KV cache.
