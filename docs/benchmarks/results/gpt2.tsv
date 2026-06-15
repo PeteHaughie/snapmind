@@ -1,0 +1,7 @@
+model	prompt	seq_len	prefill_ttft_ms	decode_tok_per_sec	cache_memory_mb	d_model	n_layers	n_heads	n_kv_heads
+gpt2	t16	13	31.05	78.1	0.81	768	12	12	12
+gpt2	t32	30	60.08	77.5	1.41	768	12	12	12
+gpt2	t64	69	127.37	72.0	2.78	768	12	12	12
+gpt2	t128	141	270.67	70.5	5.31	768	12	12	12
+gpt2	t256	208	427.26	69.5	7.66	768	12	12	12
+gpt2	t512	359	1254.79	66.2	12.97	768	12	12	12

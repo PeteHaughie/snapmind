@@ -21,7 +21,7 @@ class HFTokenizer(TokenizerABC):
 
             if hf_id is None:
                 raise ValueError(f"No tokenizer mapping for '{model_name}'")
-            self._tokenizer = Tokenizer.from_pretrained(hf_id)  # type: ignore[assignment]
+            self._tokenizer = Tokenizer.from_pretrained(hf_id)
 
     def encode(self, text: str):
         if self.model_name == "gpt2":

@@ -1,0 +1,6 @@
+experiment	metric_before	metric_after	status
+perplexity_pg19_window4k	tinyllama baseline	—	pending
+perplexity_pg19_window8k	tinyllama baseline	—	pending
+perplexity_pg19_window32k	tinyllama baseline	—	pending
+memory_peak_8k_seq	contiguous cache	—	pending
+memory_peak_32k_seq	contiguous cache	—	pending

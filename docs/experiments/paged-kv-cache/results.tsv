@@ -1,0 +1,5 @@
+experiment	metric_before	metric_after	status
+block_fragmentation_16k_seq	~20% overhead (est)	—	pending
+prefill_latency_batch1	baseline	—	pending
+prefill_latency_batch8	baseline	—	pending
+decode_latency_per_token	batch1 baseline	—	pending

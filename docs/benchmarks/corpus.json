@@ -1,0 +1,36 @@
+{
+  "_description": "Standardised prompt corpus for KV cache benchmarks. Each entry has a target token count (approximate, varies by tokenizer) and a prompt string.",
+  "_methodology": "Token counts are approximate for GPT-2 (tiktoken). Actual counts are measured at runtime by the benchmark runner.",
+  "entries": [
+    {
+      "name": "t16",
+      "target_tokens": 16,
+      "prompt": "The quick brown fox jumps over the lazy dog. Hello world."
+    },
+    {
+      "name": "t32",
+      "target_tokens": 32,
+      "prompt": "The Transformer architecture introduced in 2017 by Vaswani et al. revolutionised natural language processing. It relies entirely on self-attention mechanisms."
+    },
+    {
+      "name": "t64",
+      "target_tokens": 64,
+      "prompt": "Large language models are neural networks trained on vast amounts of text data. They learn patterns of language, including grammar, facts, reasoning abilities, and even some degree of common sense. The core innovation is the attention mechanism, which allows each token to directly attend to every other token in the sequence, enabling the model to capture long-range dependencies."
+    },
+    {
+      "name": "t128",
+      "target_tokens": 128,
+      "prompt": "The field of artificial intelligence has seen remarkable progress in recent years, driven largely by advances in deep learning and large-scale computing. Transformer-based language models, such as GPT, Llama, and Mistral, have demonstrated impressive capabilities across a wide range of natural language tasks. These models are trained using a simple objective: predict the next token in a sequence given all previous tokens. During training, the model processes billions of text examples, learning to represent language in a high-dimensional vector space where semantic relationships are encoded as geometric properties. The size of these models has grown from millions to hundreds of billions of parameters, with corresponding improvements in performance on benchmarks ranging from question answering to code generation."
+    },
+    {
+      "name": "t256",
+      "target_tokens": 256,
+      "prompt": "KV caching is a critical optimisation for transformer inference. During autoregressive generation, each new token attends to all previous tokens in the sequence. Without caching, the attention mechanism would recompute key and value representations for every prior token at each generation step, resulting in quadratic complexity in sequence length. The KV cache stores these representations after they are computed during the initial prefill pass, then appends new key-value pairs during each decode step. This reduces attention computation from O(n^2) to O(n) per step for the cached portion. However, the KV cache grows linearly with sequence length and batch size, consuming significant GPU memory. For a 7B-parameter model with 32 layers, 8 KV heads, a head dimension of 128, and a sequence length of 4096, the KV cache requires approximately 2 * 32 * 4096 * 8 * 128 * 2 bytes = 512 MB in half precision. At longer contexts or larger batch sizes, this memory footprint can become prohibitive."
+    },
+    {
+      "name": "t512",
+      "target_tokens": 512,
+      "prompt": "Several strategies have been developed to reduce the memory overhead of KV caches in large language model inference. The most straightforward approach is the naive contiguous cache, which preallocates a fixed-size buffer and concatenates new key-value tensors at each decode step. While simple to implement, this approach suffers from internal fragmentation when sequences within a batch have different lengths, and it cannot reuse memory across requests. PagedAttention, introduced in the vLLM system, addresses these limitations by managing the KV cache in fixed-size blocks, or pages. Each logical sequence maintains a page table mapping logical block indices to physical memory locations. This design eliminates fragmentation, enables memory sharing across sequences (useful for parallel sampling and beam search), and allows on-demand allocation that adapts to actual usage. The block size is a tunable hyperparameter that trades off allocation granularity against addressing overhead. Sliding window attention, used in Mistral models, bounds the KV cache to a fixed window of recent tokens. Each token attends only to the last W tokens in the sequence, where W is typically 4096 or 8192. This limits the cache to O(W) memory per layer regardless of total sequence length, at the cost of losing access to tokens beyond the window. Multi-head Latent Attention (MLA), introduced in DeepSeek-V2, compresses the KV cache into a low-dimensional latent space. Instead of storing full key and value tensors of dimension n_kv_heads * head_dim per token, MLA stores a single compressed vector of dimension d_latent, where d_latent is typically 512. This achieves up to 32x memory reduction while maintaining model quality, making it particularly attractive for very long contexts."
+    }
+  ]
+}

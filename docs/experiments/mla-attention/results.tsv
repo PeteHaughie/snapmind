@@ -1,0 +1,5 @@
+experiment	metric_before	metric_after	status
+memory_peak_32k_3b	~200 MB KV cache	—	pending
+decode_latency_per_token	standard GQA	—	pending
+perplexity_wikitext	random weights N/A	—	pending
+cache_savings_factor	1x	—	pending
