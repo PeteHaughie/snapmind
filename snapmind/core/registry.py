@@ -7,7 +7,7 @@ T = TypeVar("T")
 
 # ANCHOR: RegistryError
 class RegistryError(Exception):
-    pass
+    """Raised on registry conflicts (duplicate key) or lookups (unknown key)."""
 
 
 # ENDANCHOR: RegistryError
@@ -15,6 +15,16 @@ class RegistryError(Exception):
 
 # ANCHOR: Registry
 class Registry:
+    """Generic plugin registry with decorator-based registration and string-key dispatch.
+
+    Usage:
+        @REGISTRY.register("my_key")
+        class MyPlugin(PluginABC):
+            ...
+
+        instance = REGISTRY.create("my_key", **kwargs)
+    """
+
     def __init__(self, name: str, expected_type: type):
         self._name = name
         self._expected_type = expected_type
@@ -22,9 +32,21 @@ class Registry:
 
     @property
     def name(self) -> str:
+        """Human-readable name for error messages (e.g. ``"sampler"``)."""
         return self._name
 
     def register(self, key: str, cls: type | None = None, *, override: bool = False) -> Callable:
+        """Register a class under *key*, optionally as a decorator.
+
+        Args:
+            key: String key for dispatch.
+            cls: Class to register. If ``None``, return a decorator.
+            override: If ``True``, silently replace an existing registration.
+
+        Raises:
+            TypeError: If *cls* does not subclass *expected_type*.
+            RegistryError: If *key* already registered and *override* is ``False``.
+        """
         def _register(cls: type) -> type:
             if not issubclass(cls, self._expected_type):
                 raise TypeError(
@@ -40,11 +62,17 @@ class Registry:
         return _register
 
     def create(self, key: str, **kwargs) -> Any:
+        """Instantiate the class registered under *key*, passing ``**kwargs``.
+
+        Raises:
+            RegistryError: If *key* is not registered.
+        """
         if key not in self._registry:
             raise RegistryError(f"unknown key '{key}' in '{self._name}' registry")
         return self._registry[key](**kwargs)
 
     def list(self) -> list[str]:
+        """Return a copy of all registered keys."""
         return list(self._registry.keys())
 
     def __contains__(self, key: str) -> bool:
@@ -52,15 +80,24 @@ class Registry:
 
 
 # ANCHOR: GlobalRegistrySingletons
-ATTENTION = Registry("attention", expected_type=object)
-NORM = Registry("norm", expected_type=object)
-PE = Registry("pe", expected_type=object)
-ACTIVATION = Registry("activation", expected_type=object)
-KV_CACHE = Registry("kv_cache", expected_type=object)
-TOKENIZER = Registry("tokenizer", expected_type=object)
-SAMPLER = Registry("sampler", expected_type=object)
-LOADER = Registry("loader", expected_type=object)
-MODEL = Registry("model", expected_type=object)
+ATTENTION: Registry = Registry("attention", expected_type=object)
+"""Registry for :class:`~snapmind.layers.attention.base.AttentionABC` subclasses."""
+NORM: Registry = Registry("norm", expected_type=object)
+"""Registry for :class:`~snapmind.layers.normalization.base.NormABC` subclasses."""
+PE: Registry = Registry("pe", expected_type=object)
+"""Registry for :class:`~snapmind.layers.positional.base.PositionalEncodingABC` subclasses."""
+ACTIVATION: Registry = Registry("activation", expected_type=object)
+"""Registry for :class:`~snapmind.layers.activation.base.ActivationABC` subclasses."""
+KV_CACHE: Registry = Registry("kv_cache", expected_type=object)
+"""Registry for :class:`~snapmind.kv_cache.base.KVCacheABC` subclasses."""
+TOKENIZER: Registry = Registry("tokenizer", expected_type=object)
+"""Registry for :class:`~snapmind.tokenizer.base.TokenizerABC` subclasses."""
+SAMPLER: Registry = Registry("sampler", expected_type=object)
+"""Registry for :class:`~snapmind.sampling.base.SamplerABC` subclasses."""
+LOADER: Registry = Registry("loader", expected_type=object)
+"""Registry for :class:`~snapmind.loaders.base.WeightLoaderABC` subclasses."""
+MODEL: Registry = Registry("model", expected_type=object)
+"""Registry for :class:`~snapmind.models.base.BaseModelABC` subclasses."""
 # ENDANCHOR: GlobalRegistrySingletons
 
 __all__ = [

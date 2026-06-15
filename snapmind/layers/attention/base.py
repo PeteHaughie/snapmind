@@ -7,6 +7,11 @@ import torch.nn as nn
 
 # ANCHOR: AttentionABC
 class AttentionABC(nn.Module, abc.ABC):
+    """Base class for all attention mechanisms (SDPA, GQA, MLA, …).
+
+    Subclasses must implement :meth:`forward`, which returns ``(output, attn_weights)``.
+    """
+
     @abc.abstractmethod
     def forward(
         self,

@@ -5,6 +5,12 @@ from dataclasses import asdict, dataclass
 # ANCHOR: ModelConfig
 @dataclass
 class ModelConfig:
+    """Hyperparameters for a transformer model architecture.
+
+    Fields map to standard transformer config keys (d_model, n_heads, n_layers, …).
+    ``d_ff`` and ``n_kv_heads`` default from ``d_model`` and ``n_heads`` respectively.
+    """
+
     model_type: str = "llama"
     d_model: int = 4096
     n_heads: int = 32
@@ -32,16 +38,20 @@ class ModelConfig:
             self.n_kv_heads = self.n_heads
 
     def to_dict(self) -> dict:
+        """Serialize to a plain dict (via ``dataclasses.asdict``)."""
         return asdict(self)
 
     @classmethod
     def from_dict(cls, data: dict):
+        """Deserialize from a plain dict."""
         return cls(**data)
 
 
 # ANCHOR: KVCacheConfig
 @dataclass
 class KVCacheConfig:
+    """Configuration for KV cache allocation and device placement."""
+
     max_seq_len: int = 8192
     dtype: str = "bfloat16"
     device: str = "auto"
@@ -53,6 +63,8 @@ class KVCacheConfig:
 # ANCHOR: EngineConfig
 @dataclass
 class EngineConfig:
+    """Configuration for the prefill-decode engine pipeline."""
+
     max_batch_tokens: int = 4096
     device: str = "auto"
     dtype: str = "bfloat16"

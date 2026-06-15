@@ -6,20 +6,31 @@ import torch
 
 # ANCHOR: KVCacheABC
 class KVCacheABC(abc.ABC):
-    @abc.abstractmethod
-    def store(self, layer_idx: int, key: torch.Tensor, value: torch.Tensor, seq_pos: int) -> None: ...
+    """Base class for KV cache strategies (naive, sliding window, paged, …).
+
+    Subclasses manage per-layer key/value storage and expose standard lifecycle
+    operations: :meth:`store`, :meth:`fetch`, :meth:`evict`, :meth:`reset`.
+    """
 
     @abc.abstractmethod
-    def fetch(self, layer_idx: int) -> tuple[torch.Tensor, torch.Tensor]: ...
+    def store(self, layer_idx: int, key: torch.Tensor, value: torch.Tensor, seq_pos: int) -> None:
+        """Store *key* and *value* tensors for the given layer at *seq_pos*."""
 
     @abc.abstractmethod
-    def evict(self, tokens_to_keep: int) -> None: ...
+    def fetch(self, layer_idx: int) -> tuple[torch.Tensor, torch.Tensor]:
+        """Return ``(keys, values)`` for the given layer, concatenated along the sequence dim."""
 
     @abc.abstractmethod
-    def reset(self) -> None: ...
+    def evict(self, tokens_to_keep: int) -> None:
+        """Drop all but the *tokens_to_keep* most recent entries."""
 
     @abc.abstractmethod
-    def memory_usage(self) -> dict: ...
+    def reset(self) -> None:
+        """Clear all cached data."""
+
+    @abc.abstractmethod
+    def memory_usage(self) -> dict:
+        """Return a dict with memory/block statistics (keys vary by strategy)."""
 
 
 # ENDANCHOR: KVCacheABC
