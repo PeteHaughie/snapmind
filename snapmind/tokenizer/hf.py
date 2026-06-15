@@ -1,13 +1,7 @@
 # ─── SECTION: HuggingFace Tokenizer ─────────────────────
+from snapmind.core.architecture import ARCHITECTURE
 from snapmind.core.registry import TOKENIZER
 from snapmind.tokenizer.base import TokenizerABC
-
-_HF_TOKENIZER_ID = {
-    "gpt2": "openai-community/gpt2",
-    "tinyllama": "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
-    "mistral": "mistralai/Mistral-7B-v0.1",
-    "ministral-3-3b": "mistralai/Ministral-3-3B-Base-2512",
-}
 
 
 # ANCHOR: HFTokenizer
@@ -15,6 +9,9 @@ _HF_TOKENIZER_ID = {
 class HFTokenizer(TokenizerABC):
     def __init__(self, model_name: str = "gpt2"):
         self.model_name = model_name
+        arch = ARCHITECTURE.get(model_name) if model_name in ARCHITECTURE else None
+        hf_id = arch.tokenizer_hf_repo if arch and arch.tokenizer_hf_repo else (arch.hf_repo if arch else None)
+
         if model_name == "gpt2":
             import tiktoken
 
@@ -22,7 +19,6 @@ class HFTokenizer(TokenizerABC):
         else:
             from tokenizers import Tokenizer
 
-            hf_id = _HF_TOKENIZER_ID.get(model_name)
             if hf_id is None:
                 raise ValueError(f"No tokenizer mapping for '{model_name}'")
             self._tokenizer = Tokenizer.from_pretrained(hf_id)  # type: ignore[assignment]

@@ -28,27 +28,27 @@ class Registry:
     def __init__(self, name: str, expected_type: type):
         self._name = name
         self._expected_type = expected_type
-        self._registry: dict[str, type] = {}
+        self._registry: dict[str, Any] = {}
 
     @property
     def name(self) -> str:
         """Human-readable name for error messages (e.g. ``"sampler"``)."""
         return self._name
 
-    def register(self, key: str, cls: type | None = None, *, override: bool = False) -> Callable:
-        """Register a class under *key*, optionally as a decorator.
+    def register(self, key: str, cls: Any = None, *, override: bool = False) -> Callable:
+        """Register a class (or instance) under *key*, optionally as a decorator.
 
         Args:
             key: String key for dispatch.
-            cls: Class to register. If ``None``, return a decorator.
+            cls: Class or instance to register. If ``None``, return a decorator.
             override: If ``True``, silently replace an existing registration.
 
         Raises:
-            TypeError: If *cls* does not subclass *expected_type*.
+            TypeError: If *cls* is a class but does not subclass *expected_type*.
             RegistryError: If *key* already registered and *override* is ``False``.
         """
-        def _register(cls: type) -> type:
-            if not issubclass(cls, self._expected_type):
+        def _register(cls: Any) -> Any:
+            if isinstance(cls, type) and not issubclass(cls, self._expected_type):
                 raise TypeError(
                     f"Cannot register {cls.__name__} with key '{key}': must subclass {self._expected_type.__name__}"
                 )
@@ -70,6 +70,15 @@ class Registry:
         if key not in self._registry:
             raise RegistryError(f"unknown key '{key}' in '{self._name}' registry")
         return self._registry[key](**kwargs)
+
+    def get(self, key: str) -> Any:
+        """Return the stored object for *key* without instantiating it.
+
+        Use this for registries that store non-class objects (e.g. dataclass instances).
+        """
+        if key not in self._registry:
+            raise RegistryError(f"unknown key '{key}' in '{self._name}' registry")
+        return self._registry[key]
 
     def list(self) -> list[str]:
         """Return a copy of all registered keys."""

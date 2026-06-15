@@ -4,6 +4,7 @@ import tempfile
 import pytest
 
 from snapmind.core.config import ModelConfig
+from snapmind.core.registry import RegistryError
 from snapmind.loaders.pytorch import PyTorchLoader
 
 
@@ -31,7 +32,7 @@ class TestPyTorchLoaderHF:
     def test_raises_for_unknown_model(self, tiny_gpt2):
         unknown_config = ModelConfig(model_type="unknown_model")
         loader = PyTorchLoader()
-        with pytest.raises(ValueError, match="No HF model mapping"):
+        with pytest.raises(RegistryError, match="unknown key 'unknown_model'"):
             loader.load(None, tiny_gpt2, unknown_config)
 
 

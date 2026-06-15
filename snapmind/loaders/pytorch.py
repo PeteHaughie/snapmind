@@ -3,20 +3,27 @@ import torch
 import torch.nn as nn
 from huggingface_hub import hf_hub_download
 
+from snapmind.core.architecture import ARCHITECTURE
 from snapmind.core.config import ModelConfig
 from snapmind.core.registry import LOADER
 from snapmind.loaders.base import WeightLoaderABC
-from snapmind.loaders.safetensors import _HF_MODEL_MAP
+from snapmind.loaders.safetensors import _REMAP_FN
 
 
 # ANCHOR: PyTorchLoader
 @LOADER.register("pytorch")
 class PyTorchLoader(WeightLoaderABC):
     def load(self, path: str | None, model: nn.Module, config: ModelConfig) -> dict:
-        info = _HF_MODEL_MAP.get(config.model_type)
-        if info is None:
-            raise ValueError(f"No HF model mapping for '{config.model_type}'")
-        repo_id, _filename, remap_fn = info
+        arch = ARCHITECTURE.get(config.model_type)
+        if arch.hf_repo is None:
+            return {"missing": [], "unexpected": [], "path": None}
+
+        remap_fn = _REMAP_FN.get(config.model_type)
+        if remap_fn is None:
+            raise ValueError(f"No weight remap function for '{config.model_type}'")
+
+        repo_id: str = arch.hf_repo
+        _filename: str = arch.hf_filename
         bin_filename = _filename.replace(".safetensors", ".bin")
         if path is None:
             path = hf_hub_download(repo_id=repo_id, filename=bin_filename)

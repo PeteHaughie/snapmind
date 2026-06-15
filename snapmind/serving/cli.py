@@ -3,102 +3,28 @@ from __future__ import annotations
 
 import argparse
 import sys
-from typing import Any
 
 import torch.nn as nn
 
+import snapmind.models.gpt2  # noqa: F401 — triggers ARCHITECTURE registration
+import snapmind.models.llama  # noqa: F401
+import snapmind.models.mistral  # noqa: F401
+from snapmind.core.architecture import ARCHITECTURE
 from snapmind.core.config import ModelConfig
 
-KNOWN_MODELS: dict[str, dict[str, Any]] = {
-    "gpt2": {"d_model": 768, "n_heads": 12, "n_layers": 12, "vocab_size": 50257, "max_seq_len": 1024},
-    "tinyllama": {
-        "d_model": 2048,
-        "n_heads": 32,
-        "n_kv_heads": 4,
-        "n_layers": 22,
-        "vocab_size": 32000,
-        "max_seq_len": 2048,
-        "d_ff": 5632,
-        "norm_eps": 1e-05,
-        "rope_theta": 10000.0,
-    },
-    "llama": {
-        "d_model": 4096,
-        "n_heads": 32,
-        "n_kv_heads": 8,
-        "n_layers": 32,
-        "vocab_size": 32000,
-        "max_seq_len": 8192,
-    },
-    "mistral": {
-        "d_model": 4096,
-        "n_heads": 32,
-        "n_kv_heads": 8,
-        "n_layers": 32,
-        "vocab_size": 32000,
-        "max_seq_len": 8192,
-        "d_ff": 14336,
-        "norm_eps": 1e-05,
-        "rope_theta": 10000.0,
-        "window_size": 4096,
-    },
-    "ministral-3-3b": {
-        "d_model": 3072,
-        "n_heads": 32,
-        "n_kv_heads": 8,
-        "n_layers": 26,
-        "vocab_size": 131072,
-        "max_seq_len": 262144,
-        "d_ff": 9216,
-        "norm_eps": 1e-05,
-        "rope_theta": 1000000.0,
-        "window_size": 0,
-        "head_dim": 128,
-        "tie_word_embeddings": True,
-    },
-}
+
+def _get_model_names() -> list[str]:
+    return sorted(ARCHITECTURE.list())
 
 
 # ANCHOR: build_model
 def build_model(model_name: str, device: str = "auto") -> tuple[nn.Module, ModelConfig]:
-    from snapmind.core.config import ModelConfig
-
-    spec = KNOWN_MODELS.get(model_name)
-    if spec is None:
-        print(f"Error: unknown model '{model_name}'. Known: {', '.join(KNOWN_MODELS)}", file=sys.stderr)
-        sys.exit(1)
-
-    cfg = ModelConfig(
-        model_type="gpt2" if model_name == "gpt2" else model_name,
-        d_model=spec["d_model"],
-        n_heads=spec["n_heads"],
-        n_kv_heads=spec.get("n_kv_heads", spec["n_heads"]),
-        n_layers=spec["n_layers"],
-        vocab_size=spec["vocab_size"],
-        max_seq_len=spec["max_seq_len"],
-        norm_eps=spec.get("norm_eps", 1e-5),
-        d_ff=spec.get("d_ff", spec["d_model"] * 4),
-        rope_theta=spec.get("rope_theta", 10000.0),
-        window_size=spec.get("window_size", 0),
-        head_dim=spec.get("head_dim", None),
-        tie_word_embeddings=spec.get("tie_word_embeddings", False),
-    )
-    if model_name == "gpt2":
-        from snapmind.models.gpt2 import GPT2Model
-
-        model: nn.Module = GPT2Model(cfg)
-    elif model_name == "mistral" or model_name == "ministral-3-3b":
-        from snapmind.models.mistral import MistralModel
-
-        model = MistralModel(cfg)
-    else:
-        from snapmind.models.llama import LlamaModel
-
-        model = LlamaModel(cfg)
+    arch = ARCHITECTURE.get(model_name)
+    cfg = ModelConfig(**arch.default_config)
+    model: nn.Module = arch.model_cls(cfg)
 
     import torch
 
-    # Convert to bf16 before loading weights to reduce memory pressure
     for p in model.parameters():
         p.data = p.data.to(torch.bfloat16)
 
@@ -108,6 +34,9 @@ def build_model(model_name: str, device: str = "auto") -> tuple[nn.Module, Model
     target = resolve_device(device)
     model = model.to(target)
     return model, cfg
+
+
+# ENDANCHOR: build_model
 
 
 # ANCHOR: load_weights
@@ -167,10 +96,13 @@ def cmd_serve(args: argparse.Namespace):
 # ANCHOR: cmd_list
 def cmd_list(args: argparse.Namespace):
     print("Available models:")
-    for name, spec in KNOWN_MODELS.items():
-        kv = spec.get("n_kv_heads", spec["n_heads"])
+    for name in _get_model_names():
+        arch = ARCHITECTURE.get(name)
+        cfg = arch.default_config
+        kv = cfg.get("n_kv_heads", cfg.get("n_heads", "?"))
         print(
-            f"  {name}: {spec['n_layers']} layers, {spec['n_heads']} heads, {kv} KV heads, {spec['d_model']} dim, {spec['vocab_size']} vocab"
+            f"  {name}: {cfg.get('n_layers', '?')} layers, {cfg.get('n_heads', '?')} heads,"
+            f" {kv} KV heads, {cfg.get('d_model', '?')} dim, {cfg.get('vocab_size', '?')} vocab"
         )
 
 
@@ -182,15 +114,17 @@ def main() -> None:
     parser = argparse.ArgumentParser(prog="snapmind", description="snapmind — transformer inference framework")
     sub = parser.add_subparsers(dest="command", required=True)
 
+    model_names = _get_model_names()
+
     p_serve = sub.add_parser("serve", help="Start an OpenAI-compatible API server")
-    p_serve.add_argument("--model", default="gpt2", choices=list(KNOWN_MODELS))
+    p_serve.add_argument("--model", default="gpt2", choices=model_names)
     p_serve.add_argument("--device", default="auto", help="Device: auto, cpu, mps, cuda")
     p_serve.add_argument("--host", default="127.0.0.1")
     p_serve.add_argument("--port", type=int, default=8000)
     p_serve.set_defaults(func=cmd_serve)
 
     p_gen = sub.add_parser("generate", help="Generate text from a prompt")
-    p_gen.add_argument("--model", default="gpt2", choices=list(KNOWN_MODELS))
+    p_gen.add_argument("--model", default="gpt2", choices=model_names)
     p_gen.add_argument("--device", default="auto", help="Device: auto, cpu, mps, cuda")
     p_gen.add_argument("--prompt", default="Hello")
     p_gen.add_argument("--max-tokens", type=int, default=50)

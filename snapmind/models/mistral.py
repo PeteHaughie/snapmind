@@ -2,6 +2,7 @@
 import torch
 import torch.nn as nn
 
+from snapmind.core.architecture import ARCHITECTURE, SupportedArchitecture
 from snapmind.core.config import ModelConfig
 from snapmind.core.registry import MODEL
 from snapmind.layers.attention.gqa import GroupedQueryAttention
@@ -101,4 +102,31 @@ class MistralModel(BaseModelABC):
 
 
 # ENDANCHOR: MistralModel
+
+ARCHITECTURE.register(
+    "mistral",
+    SupportedArchitecture(
+        name="mistral",
+        model_cls=MistralModel,
+        hf_repo="mistralai/Mistral-7B-v0.1",
+        default_config=dict(
+            d_model=4096, n_heads=32, n_kv_heads=8, n_layers=32, vocab_size=32000,
+            max_seq_len=8192, d_ff=14336, norm_eps=1e-05, rope_theta=10000.0, window_size=4096,
+        ),
+    ),
+)
+ARCHITECTURE.register(
+    "ministral-3-3b",
+    SupportedArchitecture(
+        name="ministral-3-3b",
+        model_cls=MistralModel,
+        hf_repo="mistralai/Ministral-3-3B-Base-2512",
+        hf_filename="consolidated.safetensors",
+        default_config=dict(
+            d_model=3072, n_heads=32, n_kv_heads=8, n_layers=26, vocab_size=131072,
+            max_seq_len=262144, d_ff=9216, norm_eps=1e-05, rope_theta=1000000.0,
+            window_size=0, head_dim=128, tie_word_embeddings=True,
+        ),
+    ),
+)
 # ─── ENDSECTION: Mistral Model ───────────────────────────

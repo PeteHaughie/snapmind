@@ -7,6 +7,7 @@ from huggingface_hub import hf_hub_download
 from huggingface_hub.utils import EntryNotFoundError
 from safetensors.torch import load_file
 
+from snapmind.core.architecture import ARCHITECTURE
 from snapmind.core.config import ModelConfig
 from snapmind.core.registry import LOADER
 from snapmind.loaders.base import WeightLoaderABC
@@ -33,18 +34,18 @@ def _load_safetensors_state_dict(repo_id: str, filename: str) -> dict:
     return state_dict
 
 
-_HF_MODEL_MAP: dict[str, tuple[str, str, Callable]] = {}
+_REMAP_FN: dict[str, Callable] = {}
 
 
-def register_hf_model(model_type: str, repo_id: str, filename: str = "model.safetensors") -> Callable:
-    def wrapper(remap_fn: Callable) -> Callable:
-        _HF_MODEL_MAP[model_type] = (repo_id, filename, remap_fn)
-        return remap_fn
+def _register_remap(name: str) -> Callable:
+    def wrapper(fn: Callable) -> Callable:
+        _REMAP_FN[name] = fn
+        return fn
 
     return wrapper
 
 
-@register_hf_model("gpt2", "openai-community/gpt2")
+@_register_remap("gpt2")
 def _remap_gpt2(state_dict: dict, model: nn.Module, config: ModelConfig) -> dict:
     mapping = {
         "wte.weight": "embed.weight",
@@ -97,7 +98,7 @@ def _remap_gpt2(state_dict: dict, model: nn.Module, config: ModelConfig) -> dict
     return new_state
 
 
-@register_hf_model("tinyllama", "TinyLlama/TinyLlama-1.1B-Chat-v1.0")
+@_register_remap("tinyllama")
 def _remap_llama(state_dict: dict, model: nn.Module, config: ModelConfig) -> dict:
     new_state = {}
     top = {
@@ -129,12 +130,12 @@ def _remap_llama(state_dict: dict, model: nn.Module, config: ModelConfig) -> dic
     return new_state
 
 
-@register_hf_model("mistral", "mistralai/Mistral-7B-v0.1")
+@_register_remap("mistral")
 def _remap_mistral(state_dict: dict, model: nn.Module, config: ModelConfig) -> dict:
     return _remap_llama(state_dict, model, config)
 
 
-@register_hf_model("ministral-3-3b", "mistralai/Ministral-3-3B-Base-2512", filename="consolidated.safetensors")
+@_register_remap("ministral-3-3b")
 def _remap_ministral3(state_dict: dict, model: nn.Module, config: ModelConfig) -> dict:
     new_state: dict = {
         "embed.weight": state_dict["tok_embeddings.weight"],
@@ -163,10 +164,16 @@ def _remap_ministral3(state_dict: dict, model: nn.Module, config: ModelConfig) -
 @LOADER.register("safetensors")
 class SafetensorsLoader(WeightLoaderABC):
     def load(self, path: str | None, model: nn.Module, config: ModelConfig) -> dict:
-        info = _HF_MODEL_MAP.get(config.model_type)
-        if info is None:
-            raise ValueError(f"No HF model mapping for '{config.model_type}'")
-        repo_id, filename, remap_fn = info
+        arch = ARCHITECTURE.get(config.model_type)
+        if arch.hf_repo is None:
+            return {"missing": [], "unexpected": [], "path": None}
+
+        remap_fn = _REMAP_FN.get(config.model_type)
+        if remap_fn is None:
+            raise ValueError(f"No weight remap function for '{config.model_type}'")
+
+        repo_id: str = arch.hf_repo
+        filename: str = arch.hf_filename
         if path is not None:
             state_dict = load_file(path, device="cpu")
         else:

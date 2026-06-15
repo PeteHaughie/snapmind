@@ -2,6 +2,7 @@
 import torch
 import torch.nn as nn
 
+from snapmind.core.architecture import ARCHITECTURE, SupportedArchitecture
 from snapmind.core.config import ModelConfig
 from snapmind.layers.positional.learned import LearnedPositionalEncoding
 from snapmind.layers.transformer_block import TransformerBlock
@@ -37,4 +38,14 @@ class GPT2Model(BaseModelABC):
 
 
 # ENDANCHOR: GPT2Model
+
+ARCHITECTURE.register(
+    "gpt2",
+    SupportedArchitecture(
+        name="gpt2",
+        model_cls=GPT2Model,
+        hf_repo="openai-community/gpt2",
+        default_config=dict(d_model=768, n_heads=12, n_layers=12, vocab_size=50257, max_seq_len=1024, model_type="gpt2"),
+    ),
+)
 # ─── ENDSECTION: GPT-2 Model ────────────────────────────

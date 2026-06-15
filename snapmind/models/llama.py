@@ -2,6 +2,7 @@
 import torch
 import torch.nn as nn
 
+from snapmind.core.architecture import ARCHITECTURE, SupportedArchitecture
 from snapmind.core.config import ModelConfig
 from snapmind.core.registry import MODEL
 from snapmind.layers.attention.gqa import GroupedQueryAttention
@@ -80,4 +81,28 @@ class LlamaModel(BaseModelABC):
 
 
 # ENDANCHOR: LlamaModel
+
+ARCHITECTURE.register(
+    "tinyllama",
+    SupportedArchitecture(
+        name="tinyllama",
+        model_cls=LlamaModel,
+        hf_repo="TinyLlama/TinyLlama-1.1B-Chat-v1.0",
+        default_config=dict(
+            d_model=2048, n_heads=32, n_kv_heads=4, n_layers=22, vocab_size=32000,
+            max_seq_len=2048, d_ff=5632, norm_eps=1e-05, rope_theta=10000.0,
+        ),
+    ),
+)
+ARCHITECTURE.register(
+    "llama",
+    SupportedArchitecture(
+        name="llama",
+        model_cls=LlamaModel,
+        hf_repo=None,
+        default_config=dict(
+            d_model=4096, n_heads=32, n_kv_heads=8, n_layers=32, vocab_size=32000, max_seq_len=8192,
+        ),
+    ),
+)
 # ─── ENDSECTION: Llama Model ────────────────────────────
