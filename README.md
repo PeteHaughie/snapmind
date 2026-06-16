@@ -10,7 +10,7 @@ snapmind is the opposite: **everything is a plugin**. Want to test a sentence-le
 
 ## Status
 
-Phase 4 complete (serving + polish). 4 model families, 378 tests (including 49 property-based), clean lint + type check.
+Phase 4 complete (serving + polish). Lookahead Sparse Attention (FlashMemory-style) implemented and trained. 386 tests (including 49 property-based), clean lint + type check.
 
 ## Features
 
@@ -22,6 +22,8 @@ Phase 4 complete (serving + polish). 4 model families, 378 tests (including 49 p
 - **MPS/GPU support** — auto-detects Metal, CUDA, or falls back to CPU; bf16 conversion for memory-constrained devices.
 - **Paged KV cache** — block-based allocation with eviction, pure Python reimplementation of PagedAttention.
 - **MLA attention** — DeepSeek-style MultiHeadLatentAttention with compressed KV cache.
+- **Tiered KV cache** — fixed-size GPU pool with CPU backing, chunk-based eviction, sink+window pinning.
+- **Lookahead Sparse Indexer** — dual-encoder neural memory indexer (FlashMemory-style) with decoupled training on PG-19; sigmoid-gated matching scores for KV chunk selection.
 - **Property-based tests** — 49 hypothesis tests fuzzing samplers, config, registry, attention masks, and KV cache invariants.
 - **Benchmark corpus** — standardised prompt corpus and runner for KV cache performance measurement (TTFT, decode throughput, memory).
 

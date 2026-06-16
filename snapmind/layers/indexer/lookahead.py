@@ -1,3 +1,4 @@
+# ─── SECTION: Lookahead Sparse Indexer ──────────────────
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -6,6 +7,7 @@ from snapmind.core.registry import INDEXER
 from snapmind.layers.indexer.base import IndexerABC
 
 
+# ANCHOR: LookaheadSparseIndexer
 @INDEXER.register("lookahead_sparse")
 class LookaheadSparseIndexer(nn.Module, IndexerABC):
     def __init__(
@@ -102,3 +104,7 @@ class LookaheadSparseIndexer(nn.Module, IndexerABC):
 
         fused = torch.stack(head_scores).sum(dim=0)
         return torch.sigmoid(fused).mean()
+
+
+# ENDANCHOR: LookaheadSparseIndexer
+# ─── ENDSECTION: Lookahead Sparse Indexer ──────────────
