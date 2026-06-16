@@ -5,9 +5,13 @@ Implements the paper's backbone-free training strategy (Section 2.3):
 2. Cross-layer majority voting for golden labels (Section 2.2)
 3. Train query projections with BCE → Focal Loss, negative sampling 3:1
 
-Usage:
-    uv run python docs/experiments/lookahead-sparse-attention/train_indexer.py \
-        --model-type llama --max-seq-len 16384 --epochs 5
+Usage — with pre-computed data (recommended):
+    uv run python docs/experiments/lookahead-sparse-attention/generate_training_data.py
+    uv run python docs/experiments/lookahead-sparse-attention/train_indexer.py \\
+        --data-path precomputed_data/training_data_*.pt
+
+Usage — synthetic data (debug):
+    uv run python docs/experiments/lookahead-sparse-attention/train_indexer.py
 
 The backbone model is NEVER loaded during training — only pre-computed tensors.
 """
@@ -29,60 +33,10 @@ def focal_loss(
     targets: torch.Tensor,
     gamma: float = 2.0,
 ) -> torch.Tensor:
-    """Focal Loss with BCE base.
-
-    Args:
-        preds: Sigmoid-activated scores in (0, 1), shape (N,).
-        targets: Binary labels {0, 1}, shape (N,).
-        gamma: Focusing parameter (default 2.0 per paper).
-
-    Returns:
-        Scalar loss.
-    """
     bce = F.binary_cross_entropy(preds, targets.float(), reduction="none")
     pt = preds * targets + (1 - preds) * (1 - targets)
     focal_weight = (1 - pt) ** gamma
     return (focal_weight * bce).mean()
-
-
-def cross_layer_majority_voting(
-    logit_scores: dict[int, torch.Tensor],
-    n_layers: int,
-    p_threshold: float = 0.6,
-    vote_threshold: int = 3,
-) -> set[int]:
-    """Cross-layer majority voting for golden label filtering (paper Section 2.2).
-
-    Args:
-        logit_scores: ``{layer_idx: (n_chunks,)}`` raw indexer logits.
-        n_layers: Total number of CSA layers.
-        p_threshold: Nucleus threshold for top-p filtering (default 0.6).
-        vote_threshold: Minimum layer votes for golden label (default 3).
-
-    Returns:
-        Set of chunk IDs that are golden entries.
-    """
-    layer_votes: dict[int, set[int]] = {}
-    for layer_idx in range(n_layers):
-        scores = logit_scores.get(layer_idx)
-        if scores is None:
-            continue
-        probs = F.softmax(scores, dim=0)
-        sorted_vals, sorted_idx = probs.sort(descending=True)
-        cumsum = sorted_vals.cumsum(dim=0)
-        cutoff_mask = cumsum <= p_threshold
-        if not cutoff_mask.any():
-            cutoff_mask[0] = True
-        selected = set(sorted_idx[cutoff_mask].tolist())
-        layer_votes[layer_idx] = selected
-
-    chunk_votes: dict[int, int] = {}
-    for layer_selected in layer_votes.values():
-        for cid in layer_selected:
-            chunk_votes[cid] = chunk_votes.get(cid, 0) + 1
-
-    golden = {cid for cid, votes in chunk_votes.items() if votes >= vote_threshold}
-    return golden
 
 
 class PrecomputedIndexerDataset(Dataset):
@@ -93,28 +47,25 @@ class PrecomputedIndexerDataset(Dataset):
 
     def __init__(
         self,
-        hidden_states: list[dict[int, torch.Tensor]],
-        compressed_keys: list[dict[int, torch.Tensor]],
-        golden_labels: list[set[int]],
-        chunk_ids_list: list[list[int]],
+        samples: list[dict],
+        frozen_keys: dict[int, torch.Tensor],
         neg_sample_ratio: float = 3.0,
     ):
-        self.hidden_states = hidden_states
-        self.compressed_keys = compressed_keys
-        self.golden_labels = golden_labels
-        self.chunk_ids_list = chunk_ids_list
+        self.samples = samples
+        self.frozen_keys = frozen_keys
         self.neg_sample_ratio = neg_sample_ratio
 
     def __len__(self) -> int:
-        return len(self.hidden_states)
+        return len(self.samples)
 
     def __getitem__(self, idx: int) -> dict:
-        hidden = self.hidden_states[idx]
-        keys = self.compressed_keys[idx]
-        golden = self.golden_labels[idx]
-        all_chunks = self.chunk_ids_list[idx]
+        sample = self.samples[idx]
+        hidden = sample["hidden_states"]
+        keys = sample["compressed_keys"]
+        golden = sample["golden_labels"]
+        all_chunks = sample["chunk_ids"]
 
-        pos_chunks = list(golden & set(all_chunks))
+        pos_chunks = [c for c in all_chunks if c in golden]
         neg_pool = [c for c in all_chunks if c not in golden]
 
         n_pos = len(pos_chunks)
@@ -124,12 +75,7 @@ class PrecomputedIndexerDataset(Dataset):
         sampled_chunks = pos_chunks + neg_chunks
         labels = [1] * len(pos_chunks) + [0] * len(neg_chunks)
 
-        keys_list = []
-        for c in sampled_chunks:
-            if c in keys:
-                keys_list.append(keys[c])
-            else:
-                keys_list.append(torch.zeros(1, 512))
+        keys_list = [keys[c].clone() for c in sampled_chunks]
 
         return {
             "hidden_states": hidden,
@@ -140,15 +86,12 @@ class PrecomputedIndexerDataset(Dataset):
 
 
 def collate_indexer_batch(batch: list[dict]) -> dict:
-    hidden_list = [b["hidden_states"] for b in batch]
-    all_keys = [k for b in batch for k in b["compressed_keys"]]
-    all_labels = torch.cat([b["labels"] for b in batch])
-    all_chunk_ids = [c for b in batch for c in b["chunk_ids"]]
     return {
-        "hidden_states": hidden_list,
-        "compressed_keys": all_keys,
-        "chunk_ids": all_chunk_ids,
-        "labels": all_labels,
+        "hidden_states": [b["hidden_states"] for b in batch],
+        "chunk_data": [
+            {"keys": b["compressed_keys"], "chunk_ids": b["chunk_ids"], "labels": b["labels"]}
+            for b in batch
+        ],
     }
 
 
@@ -167,28 +110,27 @@ def train_epoch(
         optimizer.zero_grad()
 
         batch_loss = 0.0
-        for hidden_dict, keys_list, chunk_ids, labels in zip(
-            batch["hidden_states"],
-            batch["compressed_keys"],
-            batch["chunk_ids"],
-            batch["labels"],
-        ):
-            model.zero_grad()
-            for cid, k_frozen in zip(chunk_ids, keys_list):
+        n_total_labels = 0
+        for hidden_dict, chunk_info in zip(batch["hidden_states"], batch["chunk_data"]):
+            for cid, k_frozen in zip(chunk_info["chunk_ids"], chunk_info["keys"]):
                 if cid not in model._frozen_keys:
                     model._frozen_keys[cid] = k_frozen.to(device)
             model._initialized = True
 
-            pred_scores = model.score(hidden_dict, list(set(chunk_ids)))
+            pred_scores = model.score(hidden_dict, list(set(chunk_info["chunk_ids"])))
 
-            pred_tensor = torch.tensor(
-                [pred_scores.get(cid, 0.0) for cid in chunk_ids],
-                device=device,
-            )
-            loss = focal_loss(pred_tensor, labels.to(device), gamma=gamma)
+            vs = []
+            for cid in chunk_info["chunk_ids"]:
+                s = pred_scores.get(cid)
+                if s is None:
+                    s = torch.zeros(1, device=device)
+                vs.append(s.view(-1))
+            pred_tensor = torch.cat(vs)
+            loss = focal_loss(pred_tensor, chunk_info["labels"].to(device), gamma=gamma)
             batch_loss = batch_loss + loss
+            n_total_labels += len(chunk_info["chunk_ids"])
 
-        batch_loss = batch_loss / len(batch["labels"])
+        batch_loss = batch_loss / max(n_total_labels, 1)
         batch_loss.backward()
         optimizer.step()
 
@@ -198,8 +140,51 @@ def train_epoch(
     return total_loss / max(n_batches, 1)
 
 
+def load_precomputed_data(data_path: str) -> tuple[list[dict], dict[int, torch.Tensor], dict]:
+    data = torch.load(data_path, weights_only=True)
+    return data["samples"], data["frozen_keys"], data["metadata"]
+
+
+def generate_synthetic_data(
+    d_model: int,
+    kv_lora_rank: int,
+    indexer_layers: list[int],
+    n_samples: int,
+    n_chunks_per_sample: int,
+    device: str,
+) -> tuple[list[dict], dict[int, torch.Tensor]]:
+    samples: list[dict] = []
+    frozen_keys: dict[int, torch.Tensor] = {}
+    next_cid = 0
+
+    for _ in range(n_samples):
+        hidden_states = {
+            lid: torch.randn(d_model, device=device)
+            for lid in indexer_layers
+        }
+        chunk_ids = list(range(n_chunks_per_sample))
+        compressed_keys = {}
+        for c in chunk_ids:
+            cid = next_cid
+            compressed_keys[c] = torch.randn(1, kv_lora_rank, device=device)
+            frozen_keys[cid] = compressed_keys[c]
+            next_cid += 1
+
+        golden = set(random.sample(chunk_ids, k=max(1, n_chunks_per_sample // 5)))
+
+        samples.append({
+            "hidden_states": hidden_states,
+            "compressed_keys": compressed_keys,
+            "golden_labels": golden,
+            "chunk_ids": chunk_ids,
+        })
+
+    return samples, frozen_keys
+
+
 def main():
     parser = argparse.ArgumentParser(description="Train LookaheadSparseIndexer")
+    parser.add_argument("--data-path", default=None, help="Path to pre-computed .pt file")
     parser.add_argument("--model-type", default="llama")
     parser.add_argument("--max-seq-len", type=int, default=16384)
     parser.add_argument("--epochs", type=int, default=5)
@@ -213,72 +198,64 @@ def main():
     print("=" * 60)
     print("LookaheadSparseIndexer — Decoupled Training")
     print("=" * 60)
-    print(f"Model type: {args.model_type}")
-    print(f"Max seq len: {args.max_seq_len}")
-    print(f"Epochs: {args.epochs}")
-    print(f"Batch size: {args.batch_size}")
-    print(f"Learning rate: {args.lr}")
-    print(f"Focal gamma: {args.gamma}")
-    print(f"Negative ratio: {args.neg_ratio}")
-    print(f"Device: {args.device}")
+
+    device = args.device
+
+    if args.data_path is not None:
+        # ---------- Load real pre-computed data ----------
+        print(f"Loading pre-computed data from {args.data_path}")
+        samples, frozen_keys, metadata = load_precomputed_data(args.data_path)
+        d_model = metadata["d_model"]
+        kv_lora_rank = metadata["kv_lora_rank"]
+        n_layers = metadata["n_layers"]
+        indexer_layers = metadata["indexer_layers"]
+        n_samples = len(samples)
+        print(f"  {n_samples} samples, {len(frozen_keys)} frozen keys")
+        print(f"  d_model={d_model}, kv_lora_rank={kv_lora_rank}, n_layers={n_layers}")
+        print(f"  Indexer layers: {indexer_layers}")
+    else:
+        # ---------- Synthetic fallback ----------
+        print("No --data-path provided; using synthetic data.")
+        d_model = 2048
+        n_layers = 22
+        kv_lora_rank = 512
+        indexer_layers = [10, 12, 20]
+        n_samples = 100
+        n_chunks = 20
+        samples, frozen_keys = generate_synthetic_data(
+            d_model, kv_lora_rank, indexer_layers, n_samples, n_chunks, device
+        )
+        print(f"  {n_samples} synthetic samples, {len(frozen_keys)} frozen keys")
+
+    print(f"  Device: {device}")
     print()
 
-    dummy_config = {
-        "d_model": 2048,
-        "n_layers": 22,
-        "kv_lora_rank": 512,
-        "qk_rope_head_dim": 64,
-        "q_lora_rank": 2048,
-        "indexer_layers": [10, 12, 20],
-        "n_indexer_heads": 4,
-    }
-
+    # ---------- Build indexer ----------
     from snapmind.layers.indexer.lookahead import LookaheadSparseIndexer
 
     indexer = LookaheadSparseIndexer(
-        d_model=dummy_config["d_model"],
-        n_layers=dummy_config["n_layers"],
-        kv_lora_rank=dummy_config["kv_lora_rank"],
-        qk_rope_head_dim=dummy_config["qk_rope_head_dim"],
-        q_lora_rank=dummy_config["q_lora_rank"],
-        indexer_layers=dummy_config["indexer_layers"],
-        n_indexer_heads=dummy_config["n_indexer_heads"],
-    ).to(args.device)
+        d_model=d_model,
+        n_layers=n_layers,
+        kv_lora_rank=kv_lora_rank,
+        qk_rope_head_dim=64,
+        q_lora_rank=d_model,
+        indexer_layers=indexer_layers,
+        n_indexer_heads=4,
+    ).to(device)
+
+    # Pre-populate frozen keys
+    for cid, k in frozen_keys.items():
+        indexer._frozen_keys[cid] = k.to(device)
+    indexer._initialized = True
 
     optimizer = torch.optim.AdamW(indexer.parameters(), lr=args.lr)
 
-    n_hidden = 100
-    n_chunks_per_sample = 20
-    hidden_states_list: list[dict[int, torch.Tensor]] = []
-    compressed_keys_list: list[dict[int, torch.Tensor]] = []
-    golden_labels_list: list[set[int]] = []
-    chunk_ids_list: list[list[int]] = []
-
-    for _ in range(n_hidden):
-        hs = {
-            lid: torch.randn(dummy_config["d_model"], device=args.device)
-            for lid in dummy_config["indexer_layers"]
-        }
-        hidden_states_list.append(hs)
-
-        ck = {}
-        chunk_ids = list(range(n_chunks_per_sample))
-        for c in chunk_ids:
-            ck[c] = torch.randn(1, dummy_config["kv_lora_rank"], device=args.device)
-        compressed_keys_list.append(ck)
-        chunk_ids_list.append(chunk_ids)
-
-        golden = set(random.sample(chunk_ids, k=max(1, n_chunks_per_sample // 5)))
-        golden_labels_list.append(golden)
-
+    # ---------- Build dataset ----------
     dataset = PrecomputedIndexerDataset(
-        hidden_states=hidden_states_list,
-        compressed_keys=compressed_keys_list,
-        golden_labels=golden_labels_list,
-        chunk_ids_list=chunk_ids_list,
+        samples=samples,
+        frozen_keys=frozen_keys,
         neg_sample_ratio=args.neg_ratio,
     )
-
     dataloader = DataLoader(
         dataset,
         batch_size=args.batch_size,
@@ -290,8 +267,9 @@ def main():
     print(f"Indexer parameters: {sum(p.numel() for p in indexer.parameters())}")
     print()
 
+    # ---------- Training loop ----------
     for epoch in range(args.epochs):
-        loss = train_epoch(indexer, dataloader, optimizer, gamma=args.gamma, device=args.device)
+        loss = train_epoch(indexer, dataloader, optimizer, gamma=args.gamma, device=device)
         print(f"Epoch {epoch + 1}/{args.epochs} — loss: {loss:.6f}")
 
     save_path = "lookahead_indexer.pt"

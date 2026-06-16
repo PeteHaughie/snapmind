@@ -130,7 +130,8 @@ class TieredPagedKVCache(KVCacheABC):
         device = self._assign_device()
         desired_hot = set(always_hot)
         for cid, score in scores.items():
-            if cid in self._chunks and score >= threshold:
+            score_val = score.item() if isinstance(score, torch.Tensor) else score
+            if cid in self._chunks and score_val >= threshold:
                 desired_hot.add(cid)
 
         for cid in list(self._hot_set):

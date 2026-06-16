@@ -36,6 +36,8 @@ dev = [
     "mypy>=1.8",
     "numpy>=2.2.6",
     "pytest-asyncio>=1.4.0",
+    "datasets>=2.14",
+    "tqdm>=4.64",
 ]
 
 [tool.pytest.ini_options]

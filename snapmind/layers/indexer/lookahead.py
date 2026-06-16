@@ -51,11 +51,11 @@ class LookaheadSparseIndexer(nn.Module, IndexerABC):
         self,
         hidden_states: dict[int, torch.Tensor],
         chunk_ids: list[int],
-    ) -> dict[int, float]:
+    ) -> dict[int, torch.Tensor]:
         if not self._initialized or not chunk_ids:
-            return {cid: 0.5 for cid in chunk_ids}
+            return {cid: torch.tensor(0.5) for cid in chunk_ids}
 
-        scores: dict[int, float] = {}
+        scores: dict[int, torch.Tensor] = {}
 
         available_layers = [lid for lid in self.indexer_layers if lid in hidden_states]
         if not available_layers:
@@ -77,9 +77,9 @@ class LookaheadSparseIndexer(nn.Module, IndexerABC):
 
         return scores
 
-    def _score_single(self, h: torch.Tensor, chunk_id: int) -> float:
+    def _score_single(self, h: torch.Tensor, chunk_id: int) -> torch.Tensor:
         if chunk_id not in self._frozen_keys:
-            return 0.0
+            return torch.tensor(0.0, device=h.device)
         batch_h = h.unsqueeze(0) if h.dim() == 1 else h
         q_down = self.q_down_proj(batch_h)
         q_up = self.q_up_proj(q_down)
@@ -101,5 +101,4 @@ class LookaheadSparseIndexer(nn.Module, IndexerABC):
             head_scores.append(activated)
 
         fused = torch.stack(head_scores).sum(dim=0)
-        sigmoid_score = torch.sigmoid(fused).mean().item()
-        return sigmoid_score
+        return torch.sigmoid(fused).mean()
