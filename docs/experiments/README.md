@@ -27,3 +27,4 @@ docs/experiments/<short-descriptive-name>/
 | [Paged KV Cache](paged-kv-cache/README.md) | pending | vLLM-style page-based key/value cache to eliminate fragmentation |
 | [Sliding Window KV Cache](sliding-window-kv-cache/README.md) | pending | Mistral-style fixed-size circular buffer for bounded memory |
 | [MLA](mla-attention/README.md) | pending | DeepSeek-V2 Multi-head Latent Attention for compressed KV cache |
+| [Lookahead Sparse Attention](lookahead-sparse-attention/README.md) | experimental | FlashMemory-style tiered KV cache + neural memory indexer for ultra-long context |

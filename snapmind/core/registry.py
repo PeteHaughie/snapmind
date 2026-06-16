@@ -107,6 +107,8 @@ LOADER: Registry = Registry("loader", expected_type=object)
 """Registry for :class:`~snapmind.loaders.base.WeightLoaderABC` subclasses."""
 MODEL: Registry = Registry("model", expected_type=object)
 """Registry for :class:`~snapmind.models.base.BaseModelABC` subclasses."""
+INDEXER: Registry = Registry("indexer", expected_type=object)
+"""Registry for :class:`~snapmind.layers.indexer.base.IndexerABC` subclasses."""
 # ENDANCHOR: GlobalRegistrySingletons
 
 __all__ = [
@@ -121,5 +123,6 @@ __all__ = [
     "SAMPLER",
     "LOADER",
     "MODEL",
+    "INDEXER",
 ]
 # ─── ENDSECTION: Registry ───────────────────────────────

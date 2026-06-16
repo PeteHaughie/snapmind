@@ -78,6 +78,24 @@ class SamplingConfig:
 
 # ANCHOR: EngineConfig
 @dataclass
+class IndexerConfig:
+    """Configuration for the lookahead sparse attention indexer."""
+
+    indexer_type: str = ""
+    """Key into the INDEXER registry. Empty string disables the indexer."""
+    indexer_layers: tuple[int, ...] = (10, 12, 20)
+    """Transformer layers whose hidden states feed the indexer."""
+    indexer_interval: int = 64
+    """Decode steps between indexer evaluations (τ in the paper)."""
+    score_threshold: float = 0.5
+    """Sigmoid threshold: chunks scoring >= threshold are hot."""
+    score_k: int = 0
+    """If > 0, keep only top-k chunks by score (alternative to threshold)."""
+    kv_lora_rank: int = 512
+    """Compressed KV dimension (matches MLA's kv_lora_rank)."""
+
+
+@dataclass
 class EngineConfig:
     """Configuration for the prefill-decode engine pipeline."""
 
